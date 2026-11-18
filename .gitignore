@@ -1,0 +1,4 @@
+﻿# 仅在需要时保留
+*.log
+.DS_Store
+Thumbs.db
