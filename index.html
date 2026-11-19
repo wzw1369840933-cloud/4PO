@@ -142,25 +142,56 @@
   #topbar h1 { font-size: 17px; letter-spacing: 1px; }
   #topbar .info { font-size: 12px; }
   #menu-bar { display: flex; flex-wrap: wrap; gap: 2px 4px; justify-content: center; align-content: center; }
-  #menu-bar > button { font-size: 11px; padding: 3px 6px; }
+  /* ===== 菜单栏：五个按钮，两行（上三 / 下二），使用 items/bottom/menu 素材 ===== */
+  #menu-bar {
+    display: flex; flex-wrap: wrap;
+    align-content: center; justify-content: center;
+    gap: 4px 6px;
+    padding: 10% 6%;
+  }
+  #menu-bar > button {
+    flex: 0 0 auto;
+    height: 30px;
+    border: none; background-color: transparent;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    color: transparent;          /* 文字隐藏，靠素材显示 */
+    font-size: 0; line-height: 0;
+    padding: 0; margin: 0;
+    cursor: pointer;
+    text-indent: -9999px;        /* 兼容读屏/搜索 */
+    overflow: hidden;
+  }
+  /* 五个按钮尺寸完全一致 */
+  #menu-bar > button.menu-btn-3 { width: calc((100% - 12px) / 3); }
+  #menu-bar > button.menu-btn-2 { width: calc((100% - 12px) / 3); }
+
+  #restart       { background-image: url('items/bottom/menu/重新开始_普通.png'); }
+  #restart:hover { background-image: url('items/bottom/menu/重新开始_悬停.png'); }
+  #restart:active{ background-image: url('items/bottom/menu/重新开始__点击.png'); }
+
+  #rules-btn       { background-image: url('items/bottom/menu/规则_普通.png'); }
+  #rules-btn:hover { background-image: url('items/bottom/menu/规则_悬停.png'); }
+  #rules-btn:active{ background-image: url('items/bottom/menu/规则_点击.png'); }
+
+  #pattern-btn       { background-image: url('items/bottom/menu/和牌牌型_普通.png'); }
+  #pattern-btn:hover { background-image: url('items/bottom/menu/和牌牌型_悬停.png'); }
+  #pattern-btn:active{ background-image: url('items/bottom/menu/和牌牌型_点击.png'); }
+
+  #settings-btn       { background-image: url('items/bottom/menu/设置_普通.png'); }
+  #settings-btn:hover { background-image: url('items/bottom/menu/设置_悬停.png'); }
+  #settings-btn:active{ background-image: url('items/bottom/menu/设置_点击.png'); }
+
+  #back-menu       { background-image: url('items/bottom/menu/返回主菜单_普通.png'); }
+  #back-menu:hover { background-image: url('items/bottom/menu/返回主菜单_悬停.png'); }
+  #back-menu:active{ background-image: url('items/bottom/menu/返回主菜单_点击.png'); }
   .panelled .panel-title { font-size: 15px; }
   /* 栏位文字配色（浅色纸底 → 深色文字） */
   #topbar { color: #24402f; }
   #topbar h1 { color: #6b3f1d; text-shadow: 0 1px 0 rgba(255,255,255,.5); }
   #topbar .info b { color: #8a2a1e; }
   /* 菜单按钮：去掉半透明底，文字直接落在栏位纸面上 */
-  #menu-bar > button {
-    color: #5a2f10;
-    border: none;
-    background: transparent;
-    padding: 4px 8px;
-    border-radius: 6px;
-  }
-  #menu-bar > button:hover {
-    background: transparent;
-    color: #a33a12;
-    text-shadow: 0 0 8px rgba(255,214,140,.9);
-  }
   .panelled .panel-note { font-size: 11px; }
   /* 宝牌区：文字放到水墨上方留白处，不压到深色墨迹、不越出内圈 */
   #dora-panel { justify-content: flex-start; padding-top: 9%; }
@@ -193,49 +224,6 @@
   #topbar h1 { font-size: 20px; letter-spacing: 2px; color: var(--gold); }
   #topbar .info { font-size: 14px; }
   #topbar .info b { color: var(--gold); }
-  #restart {
-    padding: 5px 8px;
-    border: 1px solid var(--gold);
-    background: transparent;
-    color: var(--gold);
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 12px;
-  }
-  #restart:hover { background: rgba(233,196,106,.15); }
-  #rules-btn {
-    padding: 5px 8px;
-    font-size: 12px;
-    border: 1px solid #6fcf97;
-    background: transparent;
-    color: #6fcf97;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 12px;
-  }
-  #rules-btn:hover { background: rgba(111,207,151,.15); }
-  #settings-btn {
-    padding: 5px 8px;
-    font-size: 12px;
-    border: 1px solid #7fd4a4;
-    background: transparent;
-    color: #7fd4a4;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 12px;
-  }
-  #settings-btn:hover { background: rgba(127,212,164,.15); }
-  #back-menu {
-    padding: 5px 8px;
-    font-size: 12px;
-    border: 1px solid #ffb27b;
-    background: transparent;
-    color: #ffb27b;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 12px;
-  }
-  #back-menu:hover { background: rgba(255,178,123,.15); }
   #settings-menu {
     position: absolute;
     top: calc(100% + 6px);
@@ -260,6 +248,33 @@
     cursor: pointer; text-align: left;
   }
   #ai-test-toggle:hover { background: rgba(111,207,151,.15); }
+  #tile-label-toggle {
+    padding: 8px 12px; font-size: 14px; font-weight: 700;
+    border: 1px solid #2f6b4f; border-radius: 8px;
+    background: rgba(255,255,255,.06); color: #d7ecdf;
+    cursor: pointer; text-align: left;
+  }
+  #tile-label-toggle:hover { background: rgba(111,207,151,.15); }
+  #tile-label-toggle.on { background: #1f7a4d; color: #fff; border-color: #6fcf97; }
+
+  /* 牌河 / 鸣牌区：开启后每张牌左上角显示花色点数小字（如 ♥Q） */
+  body.tile-labels .river-zone .tile.face::after,
+  body.tile-labels .meld-row .tile.face::after {
+    content: attr(data-tile-name);
+    position: absolute;
+    left: 1px; top: 0;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+    pointer-events: none;
+    text-shadow: 0 0 2px rgba(0,0,0,.95), 0 1px 3px rgba(0,0,0,.9), 0 0 1px #000;
+  }
+  body.tile-labels .river-zone .tile.face.red::after,
+  body.tile-labels .meld-row .tile.face.red::after { color: #ff5a4a; }
+  body.tile-labels .river-zone .tile.face.black::after,
+  body.tile-labels .meld-row .tile.face.black::after { color: #FFE9A8; }
+  /* 手牌区（大字牌）不需要小字，避免遮挡 */
   #ai-test-toggle.on { background: #1f7a4d; color: #fff; border-color: #6fcf97; }
 
   #rules-overlay {
@@ -652,6 +667,7 @@
   #draw-btns button.primary { background: #1f7a4d; border-color: #6fcf97; }
   /* 摸牌堆 / 摸街牌区：图像按钮（普通 / 悬停 / 点击 三态） */
   #draw-btns .draw-pick-btn {
+    flex: 0 0 auto;   /* 不被容器压缩，保持素材比例 */
     height: 84px; padding: 0; border: none; border-radius: 0;
     background-color: transparent; background-repeat: no-repeat;
     background-position: center; background-size: contain;
@@ -670,6 +686,25 @@
   #draw-btns .draw-pick-btn.street { width: 134px; background-image: url('items/bottom/GAME/摸街牌区.svg'); }
   #draw-btns .draw-pick-btn.street:hover { background-image: url('items/bottom/GAME/摸街牌区_悬停.svg'); }
   #draw-btns .draw-pick-btn.street:active { background-image: url('items/bottom/GAME/摸街牌区_点击.svg'); }
+  /* 暗杠 / 补杠：图像按钮（普通 / 悬停 / 点击 三态） */
+  #draw-btns .draw-pick-btn.ankan { width: 112px; background-image: url('items/bottom/GAME/暗杠_普通.svg?v=4'); }
+  #draw-btns .draw-pick-btn.ankan:hover { background-image: url('items/bottom/GAME/暗杠_悬停.svg?v=3'); }
+  #draw-btns .draw-pick-btn.ankan:active { background-image: url('items/bottom/GAME/暗杠_点击.svg?v=3'); }
+  #draw-btns .draw-pick-btn.kakan { width: 112px; background-image: url('items/bottom/GAME/补杠_普通.svg?v=4'); }
+  #draw-btns .draw-pick-btn.kakan:hover { background-image: url('items/bottom/GAME/补杠_悬停.svg?v=3'); }
+  #draw-btns .draw-pick-btn.kakan:active { background-image: url('items/bottom/GAME/补杠_点击.svg?v=3'); }
+  /* 和 / 自摸：图像按钮 */
+  #draw-btns .draw-pick-btn.win  { width: 126px; background-image: url('items/bottom/GAME/和_普通.svg?v=1'); }
+  #draw-btns .draw-pick-btn.win:hover  { background-image: url('items/bottom/GAME/和_悬停.svg?v=1'); }
+  #draw-btns .draw-pick-btn.win:active { background-image: url('items/bottom/GAME/和_点击.svg?v=1'); }
+  #draw-btns .draw-pick-btn.tsumo { width: 168px; background-image: url('items/bottom/GAME/自摸_普通.svg?v=1'); }
+  #draw-btns .draw-pick-btn.tsumo:hover { background-image: url('items/bottom/GAME/自摸_悬停.svg?v=1'); }
+  #draw-btns .draw-pick-btn.tsumo:active { background-image: url('items/bottom/GAME/自摸_点击.svg?v=1'); }
+  /* 暗杠/补杠是黑色墨迹，深色桌面上加暖色发光描边，保证看得清 */
+  #draw-btns .draw-pick-btn.ankan,
+  #draw-btns .draw-pick-btn.kakan {
+    filter: drop-shadow(0 0 2px rgba(255,240,200,.95)) drop-shadow(0 0 6px rgba(255,220,150,.6)) drop-shadow(0 4px 10px rgba(0,0,0,.5));
+  }
   /* 牌面抬头显示：鼠标悬停任意正面牌时显示牌名 */
   /* 牌面抬头显示：无底框，只显示「花色+点数」，按花色着色 */
   #tile-hud {
@@ -807,27 +842,67 @@
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    background: rgba(6, 34, 24, .8);
-    border: 1px solid rgba(111, 207, 151, .6);
+    background: rgba(133, 155, 206, .75);   /* 外层 #859bce，75% 不透明度（25% 透明） */
+    border: 1px solid #6d80ab;
     border-radius: 14px;
     padding: 14px 20px;
     backdrop-filter: blur(2px);
     box-shadow: 0 8px 26px rgba(0,0,0,.45);
   }
   #claim-select:empty, #street-select:empty { display: none; }
-  .claim-select-head { font-size: 21px; color: #ffe6a7; font-weight: 700; }
-  .claim-countdown { color: #ff7b7b; font-weight: 800; font-size: 21px; margin-left: 8px; }
+  .claim-select-head { font-size: 21px; color: #1d2f4d; font-weight: 700; }
+  .claim-countdown { color: #b02a2a; font-weight: 800; font-size: 21px; margin-left: 8px; }
   .claim-select-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
   .claim-card, .street-card {
     display: flex; align-items: center; gap: 6px;
     padding: 10px 16px; border-radius: 11px; cursor: pointer;
-    border: 1px solid #6fcf97; background: rgba(31, 122, 77, .62); color: #fff;
+    border: 1px solid rgba(185, 205, 224, .75); background: rgba(216, 231, 240, .75); color: #21384f;
   }
   .claim-card:hover, .street-card:hover { filter: brightness(1.2); }
   .claim-card .tile.small, .street-card .tile.small { width: 54px; height: 86px; pointer-events: auto; } /* 允许悬停显示牌名（点击仍冒泡到卡片） */
   .claim-card .tile.small .rk, .street-card .tile.small .rk { font-size: 24px; }
   .claim-card .tile.small .st, .street-card .tile.small .st { font-size: 20px; }
-  .claim-card-label, .street-card-label { font-size: 20px; font-weight: 700; margin-right: 8px; color: #ffe6a7; }
+  .claim-card-label, .street-card-label { font-size: 20px; font-weight: 700; margin-right: 8px; color: #21384f; }
+  /* 鸣牌类型图标：放在牌左边，与牌等高，完整显示不裁剪 */
+  .claim-card-icon {
+    flex: 0 0 auto; height: 86px; width: 129px;   /* 吃/碰/杠/和 素材 1536:1024 */
+    background-repeat: no-repeat; background-position: center; background-size: contain;
+    display: block; margin-right: 6px; background-color: transparent;
+  }
+  .claim-card-icon.icon-da { width: 86px; }        /* 搭 素材 1:1 */
+  .claim-card-icon.icon-chi  { background-image: url('items/bottom/GAME/吃_普通.svg?v=1'); }
+  .claim-card:hover  .claim-card-icon.icon-chi  { background-image: url('items/bottom/GAME/吃_悬停.svg?v=1'); }
+  .claim-card:active .claim-card-icon.icon-chi  { background-image: url('items/bottom/GAME/吃_点击.svg?v=1'); }
+  .claim-card-icon.icon-peng { background-image: url('items/bottom/GAME/碰_普通.svg?v=1'); }
+  .claim-card:hover  .claim-card-icon.icon-peng { background-image: url('items/bottom/GAME/碰_悬停.svg?v=1'); }
+  .claim-card:active .claim-card-icon.icon-peng { background-image: url('items/bottom/GAME/碰_点击.svg?v=1'); }
+  .claim-card-icon.icon-gang { background-image: url('items/bottom/GAME/杠_普通.svg?v=1'); }
+  .claim-card:hover  .claim-card-icon.icon-gang { background-image: url('items/bottom/GAME/杠_悬停.svg?v=1'); }
+  .claim-card:active .claim-card-icon.icon-gang { background-image: url('items/bottom/GAME/杠_点击.svg?v=1'); }
+  .claim-card-icon.icon-da   { background-image: url('items/bottom/GAME/搭_普通.svg?v=1'); }
+  .claim-card:hover  .claim-card-icon.icon-da   { background-image: url('items/bottom/GAME/搭_悬停.svg?v=1'); }
+  .claim-card:active .claim-card-icon.icon-da   { background-image: url('items/bottom/GAME/搭_点击.svg?v=1'); }
+  .claim-card-icon.icon-win  { background-image: url('items/bottom/GAME/和_普通.svg?v=1'); }
+  .claim-card:hover  .claim-card-icon.icon-win  { background-image: url('items/bottom/GAME/和_悬停.svg?v=1'); }
+  .claim-card:active .claim-card-icon.icon-win  { background-image: url('items/bottom/GAME/和_点击.svg?v=1'); }
+
+  /* 过 / 返回：图片按钮固定右上角，不压倒计时 */
+  #claim-select > .claim-pass-btn,
+  #street-select > .claim-back-btn {
+    position: absolute; right: 8px; top: 6px;
+    width: 42px; height: 42px;
+    border: none; padding: 0; margin: 0;
+    background-color: transparent; background-repeat: no-repeat;
+    background-position: center; background-size: contain;
+    cursor: pointer; z-index: 2;
+  }
+  #claim-select > .claim-pass-btn { background-image: url('items/bottom/GAME/过_放弃_关闭_普通.PNG?v=1'); }
+  #claim-select > .claim-pass-btn:hover { background-image: url('items/bottom/GAME/过_放弃_关闭_悬停.PNG?v=1'); }
+  #claim-select > .claim-pass-btn:active { background-image: url('items/bottom/GAME/过_放弃_关闭_点击.PNG?v=1'); }
+  #street-select > .claim-back-btn { background-image: url('items/bottom/GAME/返回_普通.PNG?v=1'); }
+  #street-select > .claim-back-btn:hover { background-image: url('items/bottom/GAME/返回_悬停.PNG?v=1'); }
+  #street-select > .claim-back-btn:active { background-image: url('items/bottom/GAME/返回_点击.PNG?v=1'); }
+  #claim-select .claim-select-head, #street-select .claim-select-head { padding-right: 54px; }
 </style>
 </head>
 <body>
@@ -894,13 +969,15 @@
 
   <div id="col-right">
     <div id="menu-bar" class="panelled">
-      <button id="restart">重新开始</button>
-      <button id="rules-btn">规则</button>
-      <button id="settings-btn">设置</button>
-      <button id="back-menu">返回主菜单</button>
+      <button id="restart" class="menu-btn-3">重新开始</button>
+      <button id="rules-btn" class="menu-btn-3">规则</button>
+      <button id="pattern-btn" class="menu-btn-3">和牌牌型</button>
+      <button id="settings-btn" class="menu-btn-2">设置</button>
+      <button id="back-menu" class="menu-btn-2">返回主菜单</button>
       <div id="settings-menu" class="hidden">
         <div class="set-title">测试设置</div>
         <button id="ai-test-toggle">AI 只摸打（不鸣牌/不搭）：关</button>
+        <button id="tile-label-toggle">牌河/鸣牌区显示牌面小字：关</button>
       </div>
     </div>
     <div id="pattern-panel" class="side-panel panelled">
@@ -924,7 +1001,7 @@
   <div id="rules-overlay" class="hidden">
     <div id="rules-modal">
       <div class="rules-head">
-        <span>当前版本已有牌型 / 规则</span>
+        <span>当前版本已有 规则</span>
         <button id="rules-close">✕</button>
       </div>
       <div class="rules-body">
@@ -934,8 +1011,7 @@
         <h3>面子（可组合的牌型）</h3>
         <ul>
           <li><b>刻子</b>：3 张同花色、同点数/字母的牌（如 ♠A♠A♠A）。</li>
-          <li><b>顺子</b>：3 张同花色、连续的数牌（<b>仅 2~10</b>，如 ♠234、♠8910）。</li>
-          <li><b>A23 顺子</b>：A 可当作 1，与 2、3 组成顺子（♠A♠2♠3）。</li>
+          <li><b>顺子</b>：3 张同花色、连续的数牌（<b>仅 2~10</b>，如 ♠234、♠8910）；A 可当作 1，与 2、3 组成顺子（♠A♠2♠3）。</li>
           <li><b>杠</b>：4 张同花色、同点数/字母的牌（明杠 / 暗杠 / 补杠）。</li>
         </ul>
 
@@ -955,17 +1031,26 @@
         <p>碰（任意家）、吃（仅限上家，且不含 JQK）、明杠、暗杠、补杠；抢牌优先级为 和 &gt; 杠 &gt; 碰 &gt; 吃 &gt; 搭。</p>
         <p><b>多种鸣牌时</b>：手牌区上方会弹出选择窗口，列出所有可鸣类型（如 ♣3 可同时 碰333 / 吃A23 / 吃234 / 吃345），点选其一即可。</p>
         <p><b>同色替换</b>：♠♣ 为黑、♥♦ 为红；面子中可用同色（不同花色）的牌替代（如 ♠A♠A♣A、♠3♣4♠5），和牌结算时会有惩罚（当前占位）。</p>
+        <p><b>同色和牌</b>：当玩家处于听牌时，可以和同色牌 —— 例如听 ♠3，则 ♣3 与 ♠3 都可以和。</p>
         <p><b>搭</b>：任意玩家可拿走别家刚打出的牌（无匹配要求），但须把自己的一张牌放入「街牌区」，且<b>不影响行动顺序</b>。</p>
+        <p><b>搭的惩罚</b>：如果玩家在<b>一巡内使用过两次搭</b>，则会进入惩罚 —— <b>两私巡内不能搭、不能鸣牌、只能自摸和牌，且打出的牌自动置入街牌区</b>。</p>
 
         <h3>摸牌规则（当前已实装 ①②）</h3>
         <p>① 从牌堆顶摸一张；② 从一名玩家街牌区拿其最上面一张（会弹出窗口选择从谁的街牌区拿，本回合出牌改为放入自己街牌区，此牌不计自摸、算被放铳）。③④ 尚未实装。</p>
         <p><b>街牌区</b>：以任何方式置入街牌区的牌（搭、同色鸣牌、规则②出牌等）都视为打出牌，可被<b>碰 / 吃 / 杠 / 和</b>（不可被搭）。</p>
 
+        <h3>一巡</h3>
+        <p>有<b>累计等同于玩家数</b>的玩家出过牌，即为<b>一巡</b>。分为两种：<b>公巡</b> —— 整局游戏的巡数；<b>私巡</b> —— 用于计算机制与惩罚。</p>
+
+        <h3>振听 / 同色振听</h3>
+        <p>当玩家处于<b>听牌</b>时，若有人放铳、或玩家自己摸上正常和张，但玩家<b>放弃「和牌」并且打出</b>，则会进入<b>振听</b>：一巡内<b>只能自摸和牌</b>。</p>
+        <p>如果放弃的和张是<b>同色牌</b>，则进入<b>同色振听</b>：玩家仍可以和正常的和张，但一巡内<b>不能和同色和张</b>，同色和张<b>只能靠自摸和牌</b>。</p>
+
         <h3>计分（当前为占位，后续接入完整牌型分）</h3>
         <p>自摸 8 分 · 荣和（放铳）4 分。</p>
 
         <h3>尚未实装（后续版本）</h3>
-        <p>王牌（大小 Joker）、万能牌、同色替换的完整惩罚计分、和牌判定中的同色替换、宝牌、公池、诈 / 振听 / 诈听、报听；街牌区完整规则（拿牌须声明、不能拿自己街牌区、跨局不重置、一巡两次搭的惩罚）、摸牌规则③④；以及文档中的全部得分牌型与直接获胜牌型。</p>
+        <p>王牌（大小 Joker）、万能牌、同色替换的完整惩罚计分、和牌判定中的同色替换、宝牌、公池、报听；街牌区完整规则（跨局不重置）、摸牌规则③④；以及文档中的全部得分牌型与直接获胜牌型。</p>
       </div>
     </div>
   </div>
@@ -1341,9 +1426,10 @@ function renderTenpai(){
 function collectClaimOptions(seat, tile, discarderSeat){
   const p = players[seat];
   const opts = [];
-  if (p.daInPenalty) return opts; // 搭惩罚：无法鸣牌
-  const sameColorBlocked = p.sameColorFuriten && colorKeyOf(tile) === p.sameColorFuriten.key; // 同色振听：同色牌都不能荣和
-  if (p.furiten === 0 && !sameColorBlocked && canWin(p.hand.concat([tile]), p.melds.length, false, true)) opts.push({ type:'win', rank:0 }); // 振听只能自摸；单钓/同色将牌也可荣和
+  // 搭惩罚：不能搭、不能鸣牌，只能自摸和牌
+  if (p.daInPenalty) return opts;
+  // 荣和统一走 canRonAgainst：正常振听 / 同色振听（同色同点） / 搭惩罚 全部禁止，只能自摸
+  if (canRonAgainst(seat, tile)) opts.push({ type:'win', rank:0 });
   const matching = p.hand.filter(t => t.rank === tile.rank && sameColor(t.suit, tile.suit));
   const sameSuit = matching.filter(t => t.suit === tile.suit);
   const diffSuit = matching.filter(t => t.suit !== tile.suit);
@@ -1394,7 +1480,8 @@ let claimRemaining = 10;   // 鸣牌窗口倒计时秒数
 let claimIntervalId = null; // 倒计时 interval 句柄
 let sortMode = 'suit';     // 手牌自动排列模式：'suit'花 | 'color'数 | 'pattern'型
 let sortPanelOpen = false; // 排序面板开关
-let aiTestMode = false;    // 测试模式：AI 不鸣牌、不搭、不胡，只摸一张打一张（用于测试牌河）
+let aiTestMode = false;
+let tileLabelMode = false;   // 牌河/鸣牌区是否显示花色点数小字
 let selectedTileId = null; // 单击选中的手牌（双击打出）
 let lastTileClick = { id: null, time: 0 }; // 双击判定
 let logEl, actionsEl, hintEl;
@@ -1432,12 +1519,31 @@ function enterFuriten(seat){
   players[seat].furiten = 4;
   log(players[seat].name + ' 进入振听（归零前只能自摸和牌）', true);
 }
-// 同色振听：同一种颜色的同点牌（如 ♠5 与 ♣5）都不能再荣和，只能自摸
+// 同色振听：同一种颜色的同点牌（如 ♠5 与 ♣5）都不能再荣和；
+// 该同色同点张只能自摸和牌，其他正常和张仍可荣和（见 canRonAgainst）
 function colorKeyOf(tile){ return suitColor(tile.suit) + '-' + tile.rank; }
 function enterSameColorFuriten(seat, key){
   players[seat].sameColorFuriten = { key, counter: 4 };
   log(players[seat].name + ' 进入同色振听（该同色牌只能自摸）', true);
 }
+// 统一判定：这张牌能否被该玩家「荣和」
+// 只看「状态」：该玩家是否被禁止荣和这张牌（不做牌型判定）
+function ronBlocked(seat, tile){
+  const p = players[seat];
+  if (!p) return true;
+  if (p.daInPenalty) return true;                                                      // 搭惩罚：只能自摸
+  if (p.furiten > 0) return true;                                                      // 正常振听：一巡内只能自摸
+  if (p.sameColorFuriten && colorKeyOf(tile) === p.sameColorFuriten.key) return true;  // 同色振听：该同色同点只能自摸
+  return false;
+}
+// 荣和统一判定（牌【不在】手中时用）：别人打出的牌 / 别人街牌区的牌
+function canRonAgainst(seat, tile){
+  const p = players[seat];
+  if (!p || !tile) return false;
+  if (ronBlocked(seat, tile)) return false;
+  return canWin(p.hand.concat([tile]), p.melds.length, false, true);
+}
+
 // 是否存在任意一张“正常（非替代）关键牌”
 function hasNormalWait(hand, numMelds){
   for (const s of SUITS){
@@ -1723,7 +1829,8 @@ function playerDraw(seat){
   if (seat === 0) drawnTileId = tile.id;
   players[seat].lastWallDraw = tile.id; // 从正常牌堆摸牌，用于判定摸切/手切
   sortHands();
-  // 自摸检测（自摸允许同色将牌）
+  // 自摸检测（自摸允许同色将牌）。注意：自摸不受振听 / 同色振听 / 搭惩罚限制，
+  // 这三种状态只禁止「荣和」，所以这里刻意不调 canRonAgainst。
   if (canWin(players[seat].hand, players[seat].melds.length, false, true)){
     if (players[seat].isHuman){
       phase = 'claim'; pendingClaim = { seat, type:'tsumo', winTile: tile };
@@ -1889,10 +1996,14 @@ function streetDraw(seat, sourceSeat){
   log(p.name + ' 从 ' + (sourceSeat === seat ? '自己的' : players[sourceSeat].name + ' 的') + '街牌区拿了 ' + tileText(tile));
   sortHands();
   // 街牌区拿牌：拿自己的街牌区算自摸；拿别人的街牌区算被放铳
-  if (canWin(p.hand, p.melds.length, false, true)){
-    const fromOwn = sourceSeat === seat;
+  // 拿自己的街牌区 = 自摸，振听/同色振听/搭惩罚都不影响；拿别人的街牌区 = 被放铳，必须过 canRonAgainst
+  const fromOwnStreet = sourceSeat === seat;
+  // 牌已 push 进手牌：不能再用 canRonAgainst（会重复加牌），只查状态 + 现有手牌牌型
+  const streetWinOk = fromOwnStreet ? canWin(p.hand, p.melds.length, false, true)
+                                   : (!ronBlocked(seat, tile) && canWin(p.hand, p.melds.length, false, true));
+  if (streetWinOk){
     if (p.isHuman){
-      phase = 'claim'; pendingClaim = { seat, type:'tsumo', tsumoDiscarder: fromOwn ? null : sourceSeat, winTile: tile };
+      phase = 'claim'; pendingClaim = { seat, type:'tsumo', tsumoDiscarder: fromOwnStreet ? null : sourceSeat, winTile: tile };
       render(); return;
     }
     if (!aiTestMode){ schedule(() => declareWin(seat, fromOwn ? null : sourceSeat, fromOwn, tile), 700); return; }
@@ -2069,7 +2180,11 @@ function kongStreetPickFrom(sourceSeat){
 }
 // 杠后补牌的公共结算：杠上开花判定 + 进入出牌阶段
 function kongAfterDraw(seat, sourceSeat, fromOwn, tile){
-  if (canWin(players[seat].hand, players[seat].melds.length, false, true)){
+  // 从自己街牌区补牌 = 自摸；从别人街牌区补牌 = 被放铳，需过振听/同色振听/搭惩罚判定
+  // 牌已 push 进手牌：同上，只查状态 + 现有手牌牌型
+  const kongWinOk = fromOwn ? canWin(players[seat].hand, players[seat].melds.length, false, true)
+                            : (!ronBlocked(seat, tile) && canWin(players[seat].hand, players[seat].melds.length, false, true));
+  if (kongWinOk){
     if (players[seat].isHuman){
       phase = 'claim';
       pendingClaim = { seat, type:'tsumo', tsumoDiscarder: fromOwn ? null : sourceSeat, winTile: tile };
@@ -2090,8 +2205,7 @@ function collectRobbers(seat, tile){
     if (i === seat) continue;
     const p = players[i];
     if (aiTestMode && !p.isHuman) continue; // 测试模式：AI 不抢杠
-    const blocked = p.sameColorFuriten && colorKeyOf(tile) === p.sameColorFuriten.key;
-    if (p.furiten === 0 && !blocked && canWin(p.hand.concat([tile]), p.melds.length, false, true)){
+    if (canRonAgainst(i, tile)){   // 振听 / 同色振听 / 搭惩罚 统一拦截
       winners.push({ seat: i, tile: null });
     }
   }
@@ -2108,8 +2222,7 @@ function collectAnkanRobbers(seat, kongTiles){
     if (aiTestMode && !p.isHuman) continue; // 测试模式：AI 不抢杠
     for (const s of suits){
       const vt = { suit: s, rank };
-      const blocked = p.sameColorFuriten && colorKeyOf(vt) === p.sameColorFuriten.key;
-      if (p.furiten === 0 && !blocked && canWin(p.hand.concat([vt]), p.melds.length, false, true)){
+      if (canRonAgainst(i, vt)){   // 振听 / 同色振听 / 搭惩罚 统一拦截
         result.push({ seat: i, tile: vt });
       }
     }
@@ -2196,6 +2309,7 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
   if (winTile){
     const idx = sorted.findIndex(t => t.id === winTile.id);
     if (idx >= 0) sorted.push(sorted.splice(idx, 1)[0]);
+    else sorted.push(winTile);   // 荣和：和牌张是别人打出的，不在手牌里，补到最右侧
   }
   p.hand.splice(0, p.hand.length, ...sorted);
   p.winTileId = winTile ? winTile.id : null;
@@ -2440,7 +2554,7 @@ function faceSrc(t){
   if (t.rank >= 11 && t.rank <= 13){
     const r = t.rank === 11 ? 'J' : (t.rank === 12 ? 'Q' : 'K');
     // 按「第几副牌」取版本（copy 0~3），保证同一张字牌的 4 张各不相同；无 copy 时退回 id 取模
-    const base = (t.copy != null) ? t.copy : Math.abs(t.id);
+    const base = (t.copy != null && Number.isFinite(t.copy)) ? t.copy : (Number.isFinite(t.id) ? Math.abs(t.id) : 0);
     const v = (base % 4) + 1;
     return 'items/DECK/faces/' + t.suit + '_' + r + '_' + v + '.webp';
   }
@@ -2953,7 +3067,9 @@ function renderActions(){
   } else if (phase === 'claim' && pendingClaim){
     const c = pendingClaim;
     if (c.type === 'tsumo'){
-      add('和牌（自摸）', 'win', () => humanClaim('win'));
+      // 从他人街牌区摸上来的和牌算荣和（放铳），用「和」按钮；只有自己摸到的才叫自摸
+      const isRon = c.tsumoDiscarder != null;
+      addPick(isRon ? '和' : '自摸', isRon ? 'win' : 'tsumo', () => humanClaim('win'));
       add('过', '', () => humanClaim('pass'));
     } else if (c.type === 'da'){
       add('搭', 'primary', () => humanClaim('da'));
@@ -2963,8 +3079,8 @@ function renderActions(){
   } else if (phase === 'discarding' && currentSeat === 0){
     // 自己回合可选的暗杠 / 补杠
     const me = players[0];
-    if (findQuad(me.hand)) add('暗杠', 'primary', () => doAnkan(0));
-    if (hasKakan(me)) add('补杠', 'primary', () => doKakan(0));
+    if (findQuad(me.hand)) addPick('暗杠', 'ankan', () => doAnkan(0));
+    if (hasKakan(me)) addPick('补杠', 'kakan', () => doKakan(0));
   }
   renderClaimSelect();
   renderStreetSelect();
@@ -2988,13 +3104,22 @@ function renderClaimSelect(){
     const row = document.createElement('div');
     row.className = 'claim-select-row';
     const labels = { win:'和', kong:'杠', pong:'碰', chi:'吃', da:'搭' };
+    const kindMap = { win:'win', kong:'gang', pong:'peng', chi:'chi', da:'da' };
     c.options.forEach((opt, i) => {
       const card = document.createElement('button');
       card.className = 'claim-card';
-      const lbl = document.createElement('span');
-      lbl.className = 'claim-card-label';
-      lbl.textContent = opt.label || labels[opt.type] || opt.type;
-      card.appendChild(lbl);
+      const kind = kindMap[opt.type] || '';
+      const icon = document.createElement('span');
+      icon.className = 'claim-card-icon' + (kind ? ' icon-' + kind : '');
+      icon.title = opt.label || labels[opt.type] || opt.type;
+      if (kind){
+        card.appendChild(icon);
+      } else {
+        const lbl = document.createElement('span');
+        lbl.className = 'claim-card-label';
+        lbl.textContent = opt.label || labels[opt.type] || opt.type;
+        card.appendChild(lbl);
+      }
       const addTileWithName = (t) => {
         const item = document.createElement('div');
         item.className = 'claim-tile-item';
@@ -3017,7 +3142,11 @@ function renderClaimSelect(){
       row.appendChild(card);
     });
     el.appendChild(row);
-    addBtn(el, '过（放弃）', '', () => humanClaim('pass'));
+    const passBtn = document.createElement('button');
+    passBtn.className = 'claim-pass-btn';
+    passBtn.title = '过（放弃）';
+    passBtn.addEventListener('click', () => humanClaim('pass'));
+    el.appendChild(passBtn);
   }
 }
 
@@ -3059,7 +3188,13 @@ function renderStreetSelect(){
       row.appendChild(card);
     }
     el.appendChild(row);
-    if (!kongPickPending) addBtn(el, '返回（改摸牌堆）', '', () => humanDrawBack());
+    if (!kongPickPending){
+      const backBtn = document.createElement('button');
+      backBtn.className = 'claim-back-btn';
+      backBtn.title = '返回（改摸牌堆）';
+      backBtn.addEventListener('click', () => humanDrawBack());
+      el.appendChild(backBtn);
+    }
   }
 }
 function addBtn(parent, label, cls, handler){
@@ -3102,6 +3237,10 @@ document.getElementById('restart').addEventListener('click', () => {
 document.getElementById('rules-btn').addEventListener('click', () => {
   document.getElementById('rules-overlay').classList.remove('hidden');
 });
+// 和牌牌型：暂未开放，先给出提示（后续可接独立的牌型一览面板）
+document.getElementById('pattern-btn').addEventListener('click', () => {
+  showMenuToast('和牌牌型一览暂未开放');
+});
 document.getElementById('rules-close').addEventListener('click', () => {
   document.getElementById('rules-overlay').classList.add('hidden');
 });
@@ -3136,6 +3275,22 @@ document.getElementById('ai-test-toggle').addEventListener('click', () => {
   b.textContent = 'AI 只摸打（不鸣牌/不搭）：' + (aiTestMode ? '开' : '关');
   if (aiTestMode) b.classList.add('on'); else b.classList.remove('on');
   log('测试模式：AI 只摸打（不鸣牌/不搭）已' + (aiTestMode ? '开启' : '关闭'), true);
+});
+
+// 牌河 / 鸣牌区：显示牌面小字开关
+function applyTileLabelMode(){
+  document.body.classList.toggle('tile-labels', !!tileLabelMode);
+  const b = document.getElementById('tile-label-toggle');
+  if (b){
+    b.textContent = '牌河/鸣牌区显示牌面小字：' + (tileLabelMode ? '开' : '关');
+    if (tileLabelMode) b.classList.add('on'); else b.classList.remove('on');
+  }
+}
+const __tlBtn = document.getElementById('tile-label-toggle');
+if (__tlBtn) __tlBtn.addEventListener('click', () => {
+  tileLabelMode = !tileLabelMode;
+  applyTileLabelMode();
+  log('牌面小字显示已' + (tileLabelMode ? '开启' : '关闭'), true);
 });
 
 // ---------------- 主菜单 ----------------
