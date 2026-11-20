@@ -750,6 +750,20 @@
     box-shadow: 0 6px 18px rgba(0,0,0,.5);
   }
   #sort-panel.hidden { display: none; }
+  /* 「鸣」开关：理牌工具下方，开启后自动跳过鸣牌/搭（荣和、补杠、暗杠不跳过） */
+  #call-skip-btn {
+    position: absolute; left: 0; top: calc(82% + 89px);
+    width: 126px; height: 84px;
+    z-index: 80;
+    border: none; padding: 0; margin: 0;
+    border-radius: 12px;
+    background: transparent url('items/bottom/GAME/鸣_普通_点击关闭.svg') center / 100% 100% no-repeat;
+    cursor: pointer;
+    filter: drop-shadow(0 3px 8px rgba(0,0,0,.45));
+  }
+  #call-skip-btn.on { background-image: url('items/bottom/GAME/鸣_点击_开启.svg'); }
+  #call-skip-btn:hover { background-image: url('items/bottom/GAME/鸣_悬停.svg'); }
+  #call-skip-btn.hidden { display: none; }
   #draw-btns {
     position: absolute; left: 50%; bottom: 14%; transform: translateX(-50%);
     z-index: 70;
@@ -1147,6 +1161,7 @@
       <button class="sort-btn" id="sort-btn-color" data-mode="color">数</button>
       <button class="sort-btn" id="sort-btn-pattern" data-mode="pattern">型</button>
     </div>
+    <button id="call-skip-btn" class="hidden" title="鸣：开启后自动跳过鸣牌和搭（荣和、补杠、暗杠除外）"></button>
     <div id="draw-btns" class="hidden"></div>
     <div id="win-modal" class="hidden"></div>
   </div>
@@ -1714,14 +1729,18 @@ function renderTenpai(){
   // 排序开关面板：游戏中常驻，结束后隐藏
   const sortToggle = document.getElementById('sort-toggle');
   const sortPanel = document.getElementById('sort-panel');
+  const callBtn = document.getElementById('call-skip-btn');
   if (phase === 'over'){
     tab.classList.add('hidden');
     tip.classList.add('hidden');
     sortToggle.classList.add('hidden');
     sortPanel.classList.add('hidden');
+    callBtn.classList.add('hidden');
     return;
   }
   sortToggle.classList.remove('hidden');
+  callBtn.classList.remove('hidden');
+  if (autoSkipClaims) callBtn.classList.add('on'); else callBtn.classList.remove('on');
   if (sortPanelOpen) sortPanel.classList.remove('hidden'); else sortPanel.classList.add('hidden');
   const modeBtns = [['sort-btn-suit','suit'], ['sort-btn-color','color'], ['sort-btn-pattern','pattern']];
   for (const [bid, mode] of modeBtns){
@@ -1825,6 +1844,7 @@ let claimRemaining = 10;   // 鸣牌窗口倒计时秒数
 let claimIntervalId = null; // 倒计时 interval 句柄
 let sortMode = 'suit';     // 手牌自动排列模式：'suit'花 | 'color'数 | 'pattern'型
 let sortPanelOpen = false; // 排序面板开关
+let autoSkipClaims = false; // 「鸣」：开启后自动跳过鸣牌/搭（荣和、补杠、暗杠除外）
 let aiTestMode = false;
 let tileLabelMode = false;   // 牌河/鸣牌区是否显示花色点数小字
 let selectedTileId = null; // 单击选中的手牌（双击打出）
@@ -2280,6 +2300,12 @@ function resolveClaims(discarderSeat, tile, allowDa){
       }
     }
     if (players[best.seat].isHuman){
+      // 「鸣」开启：可鸣/可搭但没有荣和时直接过（补杠、暗杠是自回合按钮，不受影响）
+      if (autoSkipClaims && !opts.some(o => o.type === 'win')){
+        log('「鸣」自动跳过：' + opts.map(o => ({chi:'吃',pong:'碰',kong:'杠',da:'搭',win:'和'}[o.type] || o.type)).join('/'));
+        advanceTurn();
+        return;
+      }
       phase = 'claim';
       pendingClaim = { seat: best.seat, tile, discarderSeat, options: opts };
       render();
@@ -3830,6 +3856,19 @@ document.getElementById('sort-toggle').addEventListener('click', () => {
   sortPanelOpen = !sortPanelOpen;
   render();
 });
+// 「鸣」开关：开启后自动跳过鸣牌/搭（荣和、补杠、暗杠除外）
+document.getElementById('call-skip-btn').addEventListener('click', () => {
+  autoSkipClaims = !autoSkipClaims;
+  const b = document.getElementById('call-skip-btn');
+  if (autoSkipClaims) b.classList.add('on'); else b.classList.remove('on');
+  // 开启时若正有一个不含荣和的鸣牌窗口，直接过
+  if (autoSkipClaims && phase === 'claim' && pendingClaim && pendingClaim.seat === 0 &&
+      pendingClaim.options && !pendingClaim.options.some(o => o.type === 'win')){
+    humanClaim('pass');
+    return;
+  }
+  render();
+});
 for (const [bid, mode] of [['sort-btn-suit','suit'], ['sort-btn-color','color'], ['sort-btn-pattern','pattern']]){
   document.getElementById(bid).addEventListener('click', () => {
     sortMode = mode;
@@ -3910,6 +3949,7 @@ window.__game = {
   setCurrentSeat(s){ currentSeat = s; },
   setPhase(v){ phase = v; },
   setAiTestMode(v){ aiTestMode = v; },
+  setAutoSkipClaims(v){ autoSkipClaims = !!v; },
   get state(){ return { players, wall, dealerSeat, currentSeat, phase, pendingClaim, drawChoice, drawFromStreet, streetPick }; },
 };
 
