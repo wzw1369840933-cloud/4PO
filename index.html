@@ -274,10 +274,10 @@
   body.tile-labels .meld-row .tile.face.red::after { color: #ff5a4a; }
   body.tile-labels .river-zone .tile.face.black::after,
   body.tile-labels .meld-row .tile.face.black::after { color: #FFE9A8; }
-  /* 上/左/右鸣牌区的牌是转过的：小字反向转回来，方向与牌河一致 */
+  /* 上/左/右鸣牌区的牌是转过的：小字反向转回来，方向与牌河一致；top 同样往里推 */
   body.tile-labels #p-top .meld-row .tile.face::after { transform: rotate(180deg); }
-  body.tile-labels #p-left .meld-row .tile.face::after { transform: rotate(-90deg); }
-  body.tile-labels #p-right .meld-row .tile.face::after { transform: rotate(90deg); }
+  body.tile-labels #p-left .meld-row .tile.face::after { transform: rotate(-90deg); top: 12px; }
+  body.tile-labels #p-right .meld-row .tile.face::after { transform: rotate(90deg); top: 12px; }
   /* 手牌区（大字牌）不需要小字，避免遮挡 */
   #ai-test-toggle.on { background: #1f7a4d; color: #fff; border-color: #6fcf97; }
 
@@ -535,9 +535,9 @@
   #river-sub-2 .tile.small { transform: rotate(180deg); }
   #river-2 .tile.small::after,
   #river-sub-2 .tile.small::after { transform: rotate(180deg); }
-  /* 左右两家：牌是横放的，小字反向转回来保持正向 */
-  .river-rot.rot-cw  > .tile.small::after { transform: rotate(-90deg); }
-  .river-rot.rot-ccw > .tile.small::after { transform: rotate(90deg); }
+  /* 左右两家：牌是横放的，小字反向转回来保持正向；top 把文字往牌内推，避免被邻牌盖住 */
+  body.tile-labels .river-rot.rot-cw  > .tile.small.face::after { transform: rotate(-90deg); top: 12px; }
+  body.tile-labels .river-rot.rot-ccw > .tile.small.face::after { transform: rotate(90deg); top: 12px; }
   /* 最新打出的一张：金边高亮 */
   .river-zone .tile.small.river-latest {
     border: 2px solid var(--gold);
