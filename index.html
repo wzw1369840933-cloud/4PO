@@ -263,9 +263,9 @@
     content: attr(data-tile-name);
     position: absolute;
     left: 1px; top: 0;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 900;
-    line-height: 1.1;
+    line-height: 1.05;
     letter-spacing: -0.5px;
     pointer-events: none;
     text-shadow: 0 0 2px rgba(0,0,0,.95), 0 1px 3px rgba(0,0,0,.9), 0 0 1px #000;
@@ -374,20 +374,57 @@
   #p-self .hand-row { grid-column: 1 / -1; grid-row: 3; }
   /* 鸣牌区：与手牌同一行、固定在右下角（不夹在手牌和抬头显示器之间） */
   #p-self { position: relative; }
+  /* 玩家区压在牌河之上：副牌河变大后也不会遮住上方玩家的街牌区 */
+  #p-top, #p-right, #p-left, #p-self { position: relative; z-index: 10; }
   #p-self .meld-row {
     position: absolute;
     right: 10px;
     bottom: 22px;
-    max-width: 52%;
+    max-width: 66%;   /* 4 个杠子 = 16 张 × 32 + 间隙 ≈ 572px */
     flex-wrap: nowrap; /* 鸣牌不换行，单行排开 */
     justify-content: flex-end;
     align-items: flex-end;
     gap: 4px;
     min-height: 0;
   }
-  #p-self .meld-row .tile.small { width: 32px; height: 48px; }
+  #p-self .meld-row .tile.small { width: 32px; height: 48px; flex: 0 0 auto; }   /* 不被压缩变形 */
   #p-self .meld-row .tile.small .rk { font-size: 15px; }
   #p-self .meld-row .tile.small .st { font-size: 13px; }
+
+  /* ===== 镜面对称：上家 = 自己（下家）的 180° 旋转 =====
+     自己：手牌贴底、从左往右；街牌区在左上方；鸣牌区在右下角。
+     上家：手牌贴顶、从右往左（牌面转 180°）；街牌区在右下方；鸣牌区在左上角。 */
+  #p-top {
+    align-items: flex-end;        /* 镜像后整体贴右 */
+    justify-content: flex-start;
+    padding-top: 23px;            /* 手牌与上边框的距离，和自己贴底边保持一致 */
+    padding-bottom: 25px;         /* 鸣牌区改为绝对定位后补回高度，保持牌河位置不变 */
+  }
+  #p-top .hand-row { order: 1; flex-direction: row-reverse; }
+  #p-top .p-head { order: 2; }
+  #p-top .street-row { order: 3; flex-direction: row-reverse; }
+  #p-top .street-label { margin-right: 0; margin-left: 4px; }
+  #p-top .hand-row .tile.big { transform: rotate(180deg); }
+  #p-top .hand-row .tile.big:hover { transform: rotate(180deg); box-shadow: 0 1px 2px rgba(0,0,0,.35); }
+  #p-top .hand-row .tile.big + .tile.big.just-drawn { margin-left: 0; margin-right: 26px; }
+  #p-top .meld-row {
+    position: absolute; left: 10px; top: 23px;
+    max-width: 66%; flex-wrap: nowrap; flex-direction: row-reverse;
+    justify-content: flex-start; align-items: flex-start;
+    gap: 4px; min-height: 0;
+  }
+  #p-top .meld-row .tile.small { width: 32px; height: 48px; flex: 0 0 auto; transform: rotate(180deg); }
+  #p-top .meld-row .tile.small .rk { font-size: 15px; }
+  #p-top .meld-row .tile.small .st { font-size: 13px; }
+
+  /* ===== 镜面对称：右家 = 左家的 180° 旋转 =====
+     左家：从上到下 抬头 → 手牌 → 鸣牌 → 街牌区；右家完全倒过来。 */
+  #p-right .street-row { order: 1; flex-direction: row-reverse; }
+  #p-right .street-label { margin-right: 0; margin-left: 4px; }
+  #p-right .meld-row { order: 2; flex-direction: column-reverse; }
+  #p-right .meld-line { flex-direction: row-reverse; }
+  #p-right .hand-row { order: 3; }
+  #p-right .p-head { order: 4; }
 
   #river {
     grid-area: river;
@@ -459,26 +496,44 @@
     transform: translateY(-50%);
   }
   /* ===== 副牌河：主牌河满了以后往这里放（8 张/行 × 4 行 = 32）===== */
-  .river-zone.river-sub { gap: 1px; overflow: hidden; }
-  .river-zone.river-sub .tile.small { width: 32px; height: 48px; }
+  .river-zone.river-sub { gap: 2px; overflow: hidden; align-content: flex-start; justify-content: flex-start; }
+  .river-zone.river-sub .tile.small { width: 36px; height: 54px; flex: 0 0 auto; }   /* 与主牌河同尺寸 */
   .river-zone.river-sub .tile.small .rk { font-size: 14px; }
   .river-zone.river-sub .tile.small .st { font-size: 12px; }
-  .river-zone.river-sub {
-    width: 263px;   /* 8 × 32 + 7 × 1 */
-    height: 195px;  /* 4 × 48 + 3 × 1 */
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-content: flex-start;
-    justify-content: flex-start;
+  /* 副牌河紧贴各自的主牌河，摆牌方向与主牌河一致 */
+  /* 上家：贴主牌河左侧（他自己右手边），横排，方向同主河 */
+  #river-sub-2 {
+    width: 226px; height: 222px;
+    right: calc(50% + 152px); bottom: calc(50% + 153px);
+    flex-direction: row-reverse; flex-wrap: wrap-reverse;
   }
-  /* 上家副牌河：右上角 */
-  #river-sub-2 { right: 4px; top: 0; }
-  /* 左家副牌河：左上角 */
-  #river-sub-3 { left: 4px; top: 0; }
-  /* 你（下家）副牌河：左下角 */
-  #river-sub-0 { left: 4px; bottom: 0; }
-  /* 右家副牌河：右下角 */
-  #river-sub-1 { right: 4px; bottom: 0; }
+  /* 你（下家）：贴主牌河右侧（你自己右手边），横排，方向同主河 */
+  #river-sub-0 {
+    width: 226px; height: 222px;
+    left: calc(50% + 152px); top: calc(50% + 154px);
+    flex-direction: row; flex-wrap: wrap;
+  }
+  /* 左家：贴主牌河下方（他自己右手边），竖排 4 列 x 8 行，方向同主河 */
+  #river-sub-3 {
+    width: 222px; height: 226px;
+    right: calc(50% + 152px); top: calc(50% + 155px);
+    flex-direction: column; flex-wrap: wrap-reverse;
+  }
+  /* 右家：贴主牌河上方（他自己右手边），竖排 4 列 x 8 行，方向同主河 */
+  #river-sub-1 {
+    width: 222px; height: 226px;
+    left: calc(50% + 152px); bottom: calc(50% + 153px);
+    flex-direction: column-reverse; flex-wrap: wrap;
+  }
+  /* 左右两家的副牌河：牌小一号才能塞下 4 x 8 */
+  /* 上家打出的牌：朝向他那一面（旋转 180°），小字反向转回来保持正向可读 */
+  #river-2 .tile.small,
+  #river-sub-2 .tile.small { transform: rotate(180deg); }
+  #river-2 .tile.small::after,
+  #river-sub-2 .tile.small::after { transform: rotate(180deg); }
+  /* 左右两家：牌是横放的，小字反向转回来保持正向 */
+  .river-rot.rot-cw  > .tile.small::after { transform: rotate(-90deg); }
+  .river-rot.rot-ccw > .tile.small::after { transform: rotate(90deg); }
   /* 最新打出的一张：金边高亮 */
   .river-zone .tile.small.river-latest {
     border: 2px solid var(--gold);
@@ -528,6 +583,7 @@
   #p-left .hand-row.side-hand .tile { transform: rotate(270deg); }
   .hand-row.side-hand .tile + .tile { margin-top: var(--sideOverlap, -20px); }
   .meld-row { display: flex; flex-wrap: wrap; gap: 2px; min-height: 30px; }
+  .meld-row.side-meld .tile.small { flex: 0 0 auto; }
   .meld-row.side-meld { flex-direction: column; flex-wrap: nowrap; align-items: center; gap: 3px; min-height: 0; }
   .meld-line { display: flex; gap: 2px; }
   .discard-row { display: flex; flex-wrap: wrap; gap: 1px; align-content: flex-start; }
