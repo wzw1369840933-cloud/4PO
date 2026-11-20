@@ -594,8 +594,9 @@
     flex-direction: column; flex-wrap: nowrap; align-items: center; justify-content: center;
     gap: 0; width: 48px;   /* 旋转后的可视牌宽 */
   }
-  .meld-row.side-meld .meld-line .tile.small { transform: rotate(90deg); }
-  #p-left .meld-row.side-meld .meld-line .tile.small { transform: rotate(270deg); }
+  /* 牌面朝向各自玩家：右家 270°、左家 90°（整体转 180°，两张牌的字才不是倒的） */
+  .meld-row.side-meld .meld-line .tile.small { transform: rotate(270deg); }
+  #p-left .meld-row.side-meld .meld-line .tile.small { transform: rotate(90deg); }
   /* 牌盒是 32×48，转 90° 后可视高只有 32；用负边距把竖排的牌贴合起来（留 2px 缝） */
   .meld-row.side-meld .meld-line .tile.small + .tile.small { margin-top: -14px; }
   #p-right .meld-row.side-meld .meld-line .tile.small + .tile.small { margin-top: 0; margin-bottom: -14px; }
