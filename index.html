@@ -274,6 +274,10 @@
   body.tile-labels .meld-row .tile.face.red::after { color: #ff5a4a; }
   body.tile-labels .river-zone .tile.face.black::after,
   body.tile-labels .meld-row .tile.face.black::after { color: #FFE9A8; }
+  /* 上/左/右鸣牌区的牌是转过的：小字反向转回来，方向与牌河一致 */
+  body.tile-labels #p-top .meld-row .tile.face::after { transform: rotate(180deg); }
+  body.tile-labels #p-left .meld-row .tile.face::after { transform: rotate(-90deg); }
+  body.tile-labels #p-right .meld-row .tile.face::after { transform: rotate(90deg); }
   /* 手牌区（大字牌）不需要小字，避免遮挡 */
   #ai-test-toggle.on { background: #1f7a4d; color: #fff; border-color: #6fcf97; }
 
