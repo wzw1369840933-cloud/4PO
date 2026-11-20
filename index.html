@@ -600,6 +600,7 @@
   /* 牌名颜色：红桃/方片 → 红；黑桃/梅花 → 亮色 */
   .name-red { color: #ff6a5c; }
   .name-black { color: #FEFFCC; }
+.name-joker { color: #C373FF; }
   .street-tip-name.name-red { color: #ff6a5c; text-shadow: 0 0 3px rgba(0,0,0,.95); }
   .street-tip-name.name-black { color: #FEFFCC; text-shadow: 0 0 3px rgba(0,0,0,.95); }
   .claim-tile-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
@@ -715,6 +716,7 @@
   }
   #tile-hud.suit-red { color: #ff6a5c; }
   #tile-hud.suit-black { color: #FEFFCC; }
+#tile-hud.suit-joker { color: #C373FF; }
   #tile-hud.hidden { display: none; }
   .street-tip-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
   .street-tip-name { font-size: 11px; font-weight: 700; color: #ffe6a7; }
@@ -746,7 +748,7 @@
   #win-hand .tile { width: 54px; height: 86px; }
   #win-hand .tile .rk { font-size: 24px; }
   #win-hand .tile .st { font-size: 20px; }
-  #win-hand .tile.win-key { margin-left: 24px; }
+  #win-hand .win-key-cell { margin-left: 24px; }
   #win-panel .win-melds { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: center; }
   #win-panel .win-meld-line { display: flex; gap: 2px; }
   #win-panel .win-meld-line .tile { width: 54px; height: 86px; }
@@ -842,27 +844,27 @@
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    background: rgba(133, 155, 206, .75);   /* 外层 #859bce，75% 不透明度（25% 透明） */
+    background: rgba(133, 155, 206, .25);   /* 外层 #859bce，25% 不透明度 */
     border: 1px solid #6d80ab;
     border-radius: 14px;
     padding: 14px 20px;
-    backdrop-filter: blur(2px);
     box-shadow: 0 8px 26px rgba(0,0,0,.45);
+    backdrop-filter: blur(6px);   /* 25% 底色 + 背景虚化，做出玻璃感，避免桌面文字透上来干扰 */
   }
   #claim-select:empty, #street-select:empty { display: none; }
-  .claim-select-head { font-size: 21px; color: #1d2f4d; font-weight: 700; }
+  .claim-select-head { font-size: 21px; color: #0e2340; font-weight: 800; text-shadow: 0 1px 4px rgba(255,255,255,.9), 0 0 10px rgba(255,255,255,.75); }
   .claim-countdown { color: #b02a2a; font-weight: 800; font-size: 21px; margin-left: 8px; }
   .claim-select-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
   .claim-card, .street-card {
     display: flex; align-items: center; gap: 6px;
     padding: 10px 16px; border-radius: 11px; cursor: pointer;
-    border: 1px solid rgba(185, 205, 224, .75); background: rgba(216, 231, 240, .75); color: #21384f;
+    border: 1px solid rgba(255, 255, 255, .45); background: rgba(216, 231, 240, .25); color: #21384f;
   }
   .claim-card:hover, .street-card:hover { filter: brightness(1.2); }
   .claim-card .tile.small, .street-card .tile.small { width: 54px; height: 86px; pointer-events: auto; } /* 允许悬停显示牌名（点击仍冒泡到卡片） */
   .claim-card .tile.small .rk, .street-card .tile.small .rk { font-size: 24px; }
   .claim-card .tile.small .st, .street-card .tile.small .st { font-size: 20px; }
-  .claim-card-label, .street-card-label { font-size: 20px; font-weight: 700; margin-right: 8px; color: #21384f; }
+  .claim-card-label, .street-card-label { font-size: 20px; font-weight: 700; margin-right: 8px; color: #10263f; text-shadow: 0 1px 3px rgba(255,255,255,.85); }
   /* 鸣牌类型图标：放在牌左边，与牌等高，完整显示不裁剪 */
   .claim-card-icon {
     flex: 0 0 auto; height: 86px; width: 129px;   /* 吃/碰/杠/和 素材 1536:1024 */
@@ -888,7 +890,8 @@
 
   /* 过 / 返回：图片按钮固定右上角，不压倒计时 */
   #claim-select > .claim-pass-btn,
-  #street-select > .claim-back-btn {
+  #street-select > .claim-back-btn,
+  #repair-select > .claim-back-btn {
     position: absolute; right: 8px; top: 6px;
     width: 42px; height: 42px;
     border: none; padding: 0; margin: 0;
@@ -899,10 +902,90 @@
   #claim-select > .claim-pass-btn { background-image: url('items/bottom/GAME/过_放弃_关闭_普通.PNG?v=1'); }
   #claim-select > .claim-pass-btn:hover { background-image: url('items/bottom/GAME/过_放弃_关闭_悬停.PNG?v=1'); }
   #claim-select > .claim-pass-btn:active { background-image: url('items/bottom/GAME/过_放弃_关闭_点击.PNG?v=1'); }
-  #street-select > .claim-back-btn { background-image: url('items/bottom/GAME/返回_普通.PNG?v=1'); }
-  #street-select > .claim-back-btn:hover { background-image: url('items/bottom/GAME/返回_悬停.PNG?v=1'); }
-  #street-select > .claim-back-btn:active { background-image: url('items/bottom/GAME/返回_点击.PNG?v=1'); }
+  #street-select > .claim-back-btn,
+  #repair-select > .claim-back-btn { background-image: url('items/bottom/GAME/返回_普通.PNG?v=1'); }
+  #street-select > .claim-back-btn:hover,
+  #repair-select > .claim-back-btn:hover { background-image: url('items/bottom/GAME/返回_悬停.PNG?v=1'); }
+  #street-select > .claim-back-btn:active,
+  #repair-select > .claim-back-btn:active { background-image: url('items/bottom/GAME/返回_点击.PNG?v=1'); }
   #claim-select .claim-select-head, #street-select .claim-select-head { padding-right: 54px; }
+
+
+  /* 和牌弹窗：牌左边的小字 */
+  .win-tile-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .win-tile-cell .win-tile-name {
+    font-size: 13px; font-weight: 800; line-height: 1;
+    white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(0,0,0,.9);
+  }
+  .win-tile-cell .win-tile-name.name-black { color: #FEFFCC; }
+  .win-tile-cell .win-tile-name.name-red { color: #ff6a5c; }
+  .win-tile-cell .win-tile-name.name-joker { color: #C373FF; }
+
+  /* ===== 王牌（R / Y）===== */
+  .tile.joker { box-shadow: 0 0 0 2px rgba(195,115,255,.85) inset, 0 0 10px rgba(195,115,255,.55); }
+  .tile.joker .rk { color: #C373FF; font-weight: 900; text-shadow: 0 0 6px rgba(0,0,0,.9); }
+  body.tile-labels .river-zone .tile.face.joker::after,
+  body.tile-labels .meld-row .tile.face.joker::after { color: #C373FF; }
+  .win-joker-bonus { margin-top: 8px; font-size: 16px; font-weight: 800; color: #C373FF; text-shadow: 0 1px 4px rgba(0,0,0,.9); }
+  #log .suit-joker { color: #C373FF; }
+  /* ===== 同色复原 ===== */
+  /* 复原按钮：位于自己鸣牌区正上方 */
+  #repair-btn {
+    position: absolute;
+    right: 10px;
+    bottom: 76px;
+    width: 96px; height: 50px;
+    border: none; padding: 0; margin: 0;
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    background-image: url('items/bottom/GAME/复原_普通.svg');
+    cursor: pointer;
+    z-index: 30;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,.55));
+    transition: transform .12s ease, filter .12s ease;
+  }
+  #repair-btn:hover {
+    background-image: url('items/bottom/GAME/复原_悬停.svg');
+    transform: translateY(-3px) scale(1.04);
+    filter: drop-shadow(0 6px 14px rgba(0,0,0,.6)) brightness(1.08);
+  }
+  #repair-btn:active { background-image: url('items/bottom/GAME/复原_点击.svg'); transform: translateY(0) scale(.97); }
+
+  /* 复原选择窗口：配色取自「复原」按钮的深红，25% 透明 */
+  #repair-select {
+    position: absolute;
+    bottom: 300px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 66;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    background: rgba(151, 3, 4, .75);
+    border: 1px solid rgba(217, 164, 65, .85);
+    border-radius: 14px;
+    padding: 16px 22px 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5);
+  }
+  #repair-select.hidden { display: none; }
+  .repair-select-head { font-size: 20px; color: #ffe6a7; font-weight: 700; padding-right: 52px; }
+  .repair-select-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+  .repair-card {
+    display: flex; align-items: center; gap: 4px;
+    padding: 10px 14px; border-radius: 11px; cursor: pointer;
+    border: 1px solid rgba(255, 220, 160, .55);
+    background: rgba(255, 236, 205, .18);
+  }
+  .repair-card:hover { background: rgba(255, 236, 205, .32); }
+  .repair-card .tile.small { width: 54px; height: 86px; pointer-events: auto; }
+  .repair-card .tile.small .rk { font-size: 24px; }
+  .repair-card .tile.small .st { font-size: 20px; }
+  .repair-card .tile.sub-mark { box-shadow: 0 0 0 2px #ffd24a inset, 0 0 14px rgba(255,210,74,.95); }
+  .repair-card .repair-arrow { color: #ffe6a7; font-size: 22px; font-weight: 900; margin: 0 6px; }
 </style>
 </head>
 <body>
@@ -953,6 +1036,7 @@
     </div>
     <div id="claim-select"></div>
     <div id="street-select"></div>
+    <div id="repair-select" class="hidden"></div>
     <div id="tenpai-tab" class="hidden">▶</div>
     <div id="tenpai-tip" class="hidden"></div>
     <div id="sort-toggle" class="hidden">理</div>
@@ -1039,6 +1123,25 @@
         <p>① 从牌堆顶摸一张；② 从一名玩家街牌区拿其最上面一张（会弹出窗口选择从谁的街牌区拿，本回合出牌改为放入自己街牌区，此牌不计自摸、算被放铳）。③④ 尚未实装。</p>
         <p><b>街牌区</b>：以任何方式置入街牌区的牌（搭、同色鸣牌、规则②出牌等）都视为打出牌，可被<b>碰 / 吃 / 杠 / 和</b>（不可被搭）。</p>
 
+        <h3>王牌（R 大王 / Y 小王）</h3>
+        <p>牌库除 4 副扑克（208 张）外，另有 <b>R（大王）4 张</b>、<b>Y（小王）4 张</b>，共 <b>216 张</b>。R 与 Y 各有 4 种独立牌面。</p>
+        <ul>
+          <li><b>自成体系</b>：王牌<b>只与王牌组合</b> —— 3 张作一个面子（刻子）、2 张作将牌；<b>不能补进普通面子，也不能和普通牌组成将牌</b>。牌面上 R / Y 的颜色只是方便辨认，规则上两者同等。</li>
+          <li><b>互相鸣牌</b>：R 与 Y 之间可以互相<b>碰</b>、<b>杠</b>（如 RRY、RRYY）；王牌不能被吃。</li>
+          <li><b>将牌</b>：RR、RY、YY 都可以作将。</li>
+        </ul>
+        <p><b>加分</b>：只有当将牌或面子<b>整副都由王牌组成</b>时才加分，加成按百分比乘在结算总分上。</p>
+        <ul>
+          <li><b>将牌</b>：RR +75%、YY +50%、RY +25%</li>
+          <li><b>刻子</b>：RRR +150%、RRY +125%、RYY +100%、YYY +75%</li>
+          <li><b>杠子</b>：RRRR +200%、RRRY +175%、RRYY +150%、RYYY +125%、YYYY +100%</li>
+        </ul>
+        <p>多个王牌面子/将牌的加成<b>叠加</b>：例如同时有 RYYY 的杠（+125%）与 RY 的将（+25%），结算总分 +150%。</p>
+
+        <h3>同色复原（每回合限一次）</h3>
+        <p>玩家<b>摸牌后</b>，若鸣牌区里有<b>同色替换</b>的面子，且手牌中有能把它补正的同花色牌，鸣牌区上方会出现<b>「复原」按钮</b>。点击后用手中的正常牌换下该面子里的同色牌，该面子恢复为<b>正常面子</b>；<b>被换下的那张同色牌作为本回合打出的牌置入「街牌区」</b>（可被碰 / 吃 / 杠 / 和，不可被搭）。</p>
+        <p>如果同时有<b>多个</b>同色面子可以复原，点击按钮后会弹出窗口，由玩家选择复原哪一个（例如 ♥5♥5♦5 与 ♥3♥4♦5 同时可修时，选其一）。每回合只能复原一次。</p>
+
         <h3>一巡</h3>
         <p>有<b>累计等同于玩家数</b>的玩家出过牌，即为<b>一巡</b>。分为两种：<b>公巡</b> —— 整局游戏的巡数；<b>私巡</b> —— 用于计算机制与惩罚。</p>
 
@@ -1061,9 +1164,9 @@
 
 // ---------------- 常量与牌定义 ----------------
 const SUITS = ['s','h','d','c'];
-const SUIT_GLYPH = { s:'♠', h:'♥', d:'♦', c:'♣' };
+const SUIT_GLYPH = { s:'♠', h:'♥', d:'♦', c:'♣', R:'R', Y:'Y' };
   const SUIT_NAME = { s:'黑桃', h:'红桃', d:'方片', c:'梅花' };
-const SUIT_RED = { s:false, h:true, d:true, c:false };
+const SUIT_RED = { s:false, h:true, d:true, c:false, R:false, Y:false };
 const RANK_MIN = 2, RANK_MAX = 14; // 11=J 12=Q 13=K 14=A
 const RANK_SEQ_MAX = 10;           // 数牌 2~10 才能组成顺子；JQK 为字牌，默认不可成顺（特定牌型除外）
                                    // A 也是字牌（计分按字牌），但扑克中代表 1，可与 2、3 组成 A23 顺子且可被吃
@@ -1073,7 +1176,7 @@ function rankLabel(r){ return RANK_LABEL[r] || String(r); }
 function isHonor(rank){ return rank >= 11; }
 function isNumberRank(rank){ return rank >= RANK_MIN && rank <= RANK_SEQ_MAX; }
 // 同色：♠♣ 为黑、♥♦ 为红
-function suitColor(s){ return (s === 's' || s === 'c') ? 'black' : 'red'; }
+function suitColor(s){ if (s === 'R' || s === 'Y') return 'joker'; return (s === 's' || s === 'c') ? 'black' : 'red'; }
 function sameColor(s1, s2){ return suitColor(s1) === suitColor(s2); }
 const NUM_DECKS = 4;          // 使用 4 副扑克牌（208 张）；文档为 216/220（含王牌/万能牌）
 const START_TILES = 13;       // 每人初始手牌
@@ -1096,6 +1199,14 @@ function makeDeck(){
       }
     }
   }
+  // 王牌：R（大王）4 张、Y（小王）4 张，各 4 种独立牌面
+  for (let d = 0; d < NUM_DECKS; d++){
+    for (const js of ['R','Y']){
+      const t = makeTile(js, 0);
+      t.copy = d;
+      deck.push(t);
+    }
+  }
   return deck;
 }
 function shuffle(arr){
@@ -1109,7 +1220,7 @@ function shuffle(arr){
 // ---------------- 和牌判定 ----------------
 function buildCounts(hand){
   const c = { s:new Array(15).fill(0), h:new Array(15).fill(0), d:new Array(15).fill(0), c:new Array(15).fill(0) };
-  for (const t of hand) c[t.suit][t.rank]++;
+  for (const t of hand) { if (isJoker(t)) continue; c[t.suit][t.rank]++; }
   return c;
 }
 function isEmptyCounts(c){
@@ -1123,7 +1234,7 @@ function firstTile(c){
 // 同色替换的和牌判定：面子按“颜色”（黑/红）组成，将牌默认同花色（自摸/单钓时同色也可）
 function buildColorCounts(hand){
   const c = { black:new Array(15).fill(0), red:new Array(15).fill(0) };
-  for (const t of hand) c[suitColor(t.suit)][t.rank]++;
+  for (const t of hand) { if (isJoker(t)) continue; c[suitColor(t.suit)][t.rank]++; }
   return c;
 }
 function isEmptyColor(c){
@@ -1174,9 +1285,121 @@ function removeTwo(hand, suit, rank, color){
 }
 // hand 是否能组成 (4 - numMelds) 个面子 + 1 对将牌
 // allowColorPair = true 时允许将牌用同色替换（自摸 / 单钓）
+// ---------------- 王牌（R 大王 / Y 小王）：万能牌 ----------------
+// 规则：视为任意花色与点数，可作将牌 / 刻子 / 杠子；R 与 Y 之间可以互相鸣牌（碰、杠）。
+// 全由王牌组成的面子 / 将牌在和牌结算时给出额外加分（见 jokerMeldBonus）。
+function isJoker(t){ return !!t && (t.suit === 'R' || t.suit === 'Y'); }
+function countJokers(list){ let n = 0; for (const t of list) if (isJoker(t)) n++; return n; }
+
+// 是否能把 need 个面子拼出来（真牌按颜色计数，缺的用王牌顶）
+// 含王牌时的和牌判定
+// 规则：王牌自成一套体系，只能与王牌组合 —— 3 张作一个面子、2 张作将牌，
+// 不能补进普通面子，也不能和普通牌组成将牌。
+function canWinWithJokers(hand, numMelds){
+  const target = 4 - numMelds;
+  if (target < 0) return false;
+  const jokers = hand.filter(isJoker);
+  const real = hand.filter(t => !isJoker(t));
+  const jn = jokers.length;
+  // A) 王牌作将（2 张王），其余王牌每 3 张算一个面子
+  if (jn >= 2 && (jn - 2) % 3 === 0){
+    const jm = (jn - 2) / 3;
+    if (jm <= target && canMeldColor(buildColorCounts(real), target - jm, false)) return true;
+  }
+  // B) 普通将牌（两张真牌，同色同点），王牌全部按 3 张一个面子
+  if (jn % 3 === 0){
+    const jm = jn / 3;
+    if (jm <= target){
+      const cc = buildColorCounts(real);
+      for (const col of ['black','red']){
+        for (let r = RANK_MIN; r <= RANK_MAX; r++){
+          if (cc[col][r] >= 2){
+            cc[col][r] -= 2;
+            const ok = canMeldColor(cc, target - jm, false);
+            cc[col][r] += 2;
+            if (ok) return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
+// ---------------- 王牌加分（结算总分 ×(1 + 百分比)） ----------------
+// 只有「整副都由王牌组成」的将牌 / 刻子 / 杠子才加分；混入普通牌的王牌只是万能补位，不加分
+const JOKER_PAIR_BONUS   = { 'RR': 75, 'RY': 25, 'YY': 50 };
+const JOKER_TRIPLE_BONUS = { 'RRR': 150, 'RRY': 125, 'RYY': 100, 'YYY': 75 };
+const JOKER_KONG_BONUS   = { 'RRRR': 200, 'RRRY': 175, 'RRYY': 150, 'RYYY': 125, 'YYYY': 100 };
+function jokerWord(tiles){           // 纯王牌 → 由 R/Y 组成的有序字符串，否则 null
+  if (!tiles.length) return null;
+  const ks = [];
+  for (const t of tiles){
+    if (!isJoker(t)) return null;
+    ks.push(t.suit);
+  }
+  ks.sort();                          // R 在前
+  return ks.join('');
+}
+function jokerMeldBonus(tiles){
+  const w = jokerWord(tiles);
+  if (!w) return 0;
+  if (w.length === 2) return JOKER_PAIR_BONUS[w] || 0;
+  if (w.length === 3) return JOKER_TRIPLE_BONUS[w] || 0;
+  if (w.length === 4) return JOKER_KONG_BONUS[w] || 0;
+  return 0;
+}
+// 把一堆 R/Y 分组（尽量先凑 4 张、再 3 张、最后 2 张），返回 [{word, pct}]
+// 手牌里的王牌：3 张一个刻子、2 张作将；只用「3 张 / 2 张」这两种分组
+// 每个刻子 = 75 + 每张 R 再加 25；将牌 RR=75 / RY=25 / YY=50
+function jokerMeldBonusByCount(r, y){
+  const n = r + y;
+  if (n % 3 !== 0) return 0;
+  return 75 * (n / 3) + 25 * r;
+}
+function bestJokerPairAndMelds(r, y, withPair){
+  if (!withPair) return jokerMeldBonusByCount(r, y);
+  let best = 0;
+  for (const [pr, py] of [[2,0],[1,1],[0,2]]){
+    if (pr > r || py > y) continue;
+    const rl = r - pr, yl = y - py;
+    if ((rl + yl) % 3 !== 0) continue;
+    const pairPct = pr === 2 ? 75 : (pr === 1 ? 25 : 50);
+    const pct = pairPct + jokerMeldBonusByCount(rl, yl);
+    if (pct > best) best = pct;
+  }
+  return best;
+}
+// 计算整手牌的王牌加成：鸣牌区里已成型的王牌面子 + 手牌里还没成型的王牌
+// 计算整手牌的王牌加成：鸣牌区里已成型的王牌面子 + 手牌里的王牌分组
+function calcJokerBonus(hand, melds){
+  let pct = 0;
+  const parts = [];
+  for (const m of melds || []){
+    const b = jokerMeldBonus(m.tiles);
+    if (b){ pct += b; parts.push({ word: jokerWord(m.tiles), pct: b, kind: m.type }); }
+  }
+  const handJokers = (hand || []).filter(isJoker);
+  const hr = handJokers.filter(t => t.suit === 'R').length;
+  const hy = handJokers.length - hr;
+  if (hr + hy >= 2){
+    // 余数 2 → 其中 2 张作将牌；余数 0 → 全部作刻子
+    const withPair = ((hr + hy) % 3 === 2);
+    const b = bestJokerPairAndMelds(hr, hy, withPair);
+    if (b > 0){
+      pct += b;
+      const word = 'R'.repeat(hr) + 'Y'.repeat(hy);
+      parts.push({ word, pct: b, kind: 'hand' });
+    }
+  }
+  return { pct, parts };
+}
+
 function canWin(hand, numMelds, allowFaceSeq, allowColorPair){
   const target = 4 - numMelds;
   if (target < 0) return false;
+  // 手牌里有王牌：用万能牌求解器（R/Y 可补任意花色与点数）
+  if (countJokers(hand) > 0) return canWinWithJokers(hand, numMelds);
   // 同花色将牌
   for (const s of SUITS){
     for (let r=RANK_MIN; r<=RANK_MAX; r++){
@@ -1290,6 +1513,7 @@ function findTileColor(hand, rank, color, excludeIds){
 }
 // 该面子是否含同色替换（花色不完全相同）
 function hasSubstitution(tiles){
+  if (tiles.some(isJoker)) return false;   // 含王牌的面子不算「同色替换」
   return new Set(tiles.map(t => t.suit)).size > 1;
 }
 // 吃：返回所有与 discard 组成顺子的手牌对（含同色替换，任意同色组合均可）
@@ -1333,6 +1557,10 @@ function winningTiles(hand, numMelds){
         result.push({ suit:s, rank:r });
       }
     }
+  }
+  // 王牌本身也可以成为和张
+  for (const js of ['R','Y']){
+    if (canWin(hand.concat([{ suit: js, rank: 0 }]), numMelds, false, true)) result.push({ suit: js, rank: 0 });
   }
   return result;
 }
@@ -1430,7 +1658,20 @@ function collectClaimOptions(seat, tile, discarderSeat){
   if (p.daInPenalty) return opts;
   // 荣和统一走 canRonAgainst：正常振听 / 同色振听（同色同点） / 搭惩罚 全部禁止，只能自摸
   if (canRonAgainst(seat, tile)) opts.push({ type:'win', rank:0 });
-  const matching = p.hand.filter(t => t.rank === tile.rank && sameColor(t.suit, tile.suit));
+  // 王牌：R / Y 之间可以互相碰、杠（不能吃）
+  if (isJoker(tile)){
+    const mates = p.hand.filter(t => isJoker(t));
+    if (mates.length >= 3){
+      const tiles = [tile, ...mates.slice(0,3)];
+      opts.push({ type:'kong', tiles, sub:false, rank: claimRank('kong', false, 0) });
+    }
+    if (mates.length >= 2){
+      const tiles = [tile, ...mates.slice(0,2)];
+      opts.push({ type:'pong', tiles, sub:false, rank: claimRank('pong', false, 0) });
+    }
+    return opts;
+  }
+  const matching = p.hand.filter(t => !isJoker(t) && t.rank === tile.rank && sameColor(t.suit, tile.suit));
   const sameSuit = matching.filter(t => t.suit === tile.suit);
   const diffSuit = matching.filter(t => t.suit !== tile.suit);
   // 杠：同色杠最多只允许一张同色替代（如 ♦5♦5♦5♥5）
@@ -1513,7 +1754,7 @@ function updateRoundBadge(){
 }
 
 function newPlayer(name, seat, isHuman){
-  return { name, seat, isHuman, hand: [], melds: [], discards: [], street: [], riichi:false, revealed:false, furiten:0, daPenalty:0, daInPenalty:false, sameColorFuriten:null, lastWallDraw:null };
+  return { name, seat, isHuman, hand: [], melds: [], discards: [], street: [], riichi:false, revealed:false, furiten:0, daPenalty:0, daInPenalty:false, sameColorFuriten:null, lastWallDraw:null, repairAllowed:false, repairUsed:false };
 }
 function enterFuriten(seat){
   players[seat].furiten = 4;
@@ -1746,15 +1987,14 @@ function applySortToSelf(){
   const p = players[0];
   const drawn = drawnTileId != null ? p.hand.find(t => t.id === drawnTileId) : null;
   const rest = p.hand.filter(t => t !== drawn);
-  const wilds = rest.filter(t => t.kind === 'wild');             // 万能牌（独立类型）→ 最左
-  const kingBig = rest.filter(t => t.kind === 'king-big');       // 王牌·大王 → 最右（靠左）
-  const kingSmall = rest.filter(t => t.kind === 'king-small');   // 王牌·小王 → 最右
-  const normals = rest.filter(t => !t.kind || (t.kind !== 'wild' && t.kind !== 'king-big' && t.kind !== 'king-small'));
+  const kingBig = rest.filter(t => isJoker(t) && t.suit === 'R');     // 大王 R → 靠左
+  const kingSmall = rest.filter(t => isJoker(t) && t.suit === 'Y');   // 小王 Y → 最右
+  const normals = rest.filter(t => !isJoker(t));
   let sorted;
   if (sortMode === 'color') sorted = normals.slice().sort(cmpColorMode);
   else if (sortMode === 'pattern') sorted = patternSortTiles(normals);
   else sorted = normals.slice().sort(cmpSuitMode);
-  p.hand.splice(0, p.hand.length, ...wilds, ...sorted, ...kingBig, ...kingSmall);
+  p.hand.splice(0, p.hand.length, ...sorted, ...kingBig, ...kingSmall);
   if (drawn) p.hand.push(drawn); // 新摸的牌保持在最右
 }
 // 拖动排序：把 srcId 那张牌移到 dstId 前面
@@ -1828,6 +2068,8 @@ function playerDraw(seat){
   players[seat].hand.push(tile);
   if (seat === 0) drawnTileId = tile.id;
   players[seat].lastWallDraw = tile.id; // 从正常牌堆摸牌，用于判定摸切/手切
+  players[seat].repairAllowed = true;   // 摸牌后可用「同色复原」（每回合一次）
+  players[seat].repairUsed = false;
   sortHands();
   // 自摸检测（自摸允许同色将牌）。注意：自摸不受振听 / 同色振听 / 搭惩罚限制，
   // 这三种状态只禁止「荣和」，所以这里刻意不调 canRonAgainst。
@@ -1849,7 +2091,9 @@ function playerDiscard(seat, tileId){
   const tile = p.hand.find(t => t.id === tileId);
   if (!tile) return;
   if (seat === 0){ drawnTileId = null; selectedTileId = null; }
+  p.repairAllowed = false;   // 已经出牌，本回合不能再复原
   removeTile(p.hand, tileId);
+  if (seat === 0) applySortToSelf();   // 打出后自动按当前理牌方式（花/数/型）整理手牌
   if (drawFromStreet || p.daInPenalty){
     // 本回合出牌改为放入自己街牌区（也视为打出牌；搭惩罚时自动进街牌区）
     drawFromStreet = false;
@@ -1953,6 +2197,7 @@ function resolveClaims(discarderSeat, tile, allowDa){
 }
 
 function advanceTurn(){
+  for (const q of players){ q.repairAllowed = false; q.repairUsed = false; }   // 新回合一：复原资格清零
   currentSeat = (currentSeat + 1) % PLAYER_COUNT;
   phase = 'discarding';
   pendingClaim = null; pendingDiscard = null; daGivePending = false;
@@ -1988,10 +2233,14 @@ function streetDraw(seat, sourceSeat){
     }
     if (sourceSeat == null){ playerDraw(seat); return; }
   }
+  // 防御：指定来源的街牌区已空（例如被别家先拿走了）时，退回正常摸牌
+  if (!players[sourceSeat] || players[sourceSeat].street.length === 0){ playerDraw(seat); return; }
   const tile = players[sourceSeat].street.pop();
   p.hand.push(tile);
   if (seat === 0) drawnTileId = tile.id;
   p.lastWallDraw = null; // 街牌区拿的牌不算正常牌堆摸牌
+  p.repairAllowed = true;   // 摸牌后可用「同色复原」
+  p.repairUsed = false;
   bannedStreetKey = tileKey(tile);
   log(p.name + ' 从 ' + (sourceSeat === seat ? '自己的' : players[sourceSeat].name + ' 的') + '街牌区拿了 ' + tileText(tile));
   sortHands();
@@ -2162,9 +2411,13 @@ function kongDraw(seat, fromStreet){
 function kongDrawFromStreet(seat, sourceSeat, sub){
   if (sourceSeat == null || players[sourceSeat].street.length === 0){ kongDraw(seat, sub); return; }
   const p = players[seat];
+  // 防御：指定来源的街牌区已空（例如被别家先拿走了）时，退回正常摸牌
+  if (!players[sourceSeat] || players[sourceSeat].street.length === 0){ playerDraw(seat); return; }
   const tile = players[sourceSeat].street.pop();
   p.hand.push(tile);
   if (seat === 0) drawnTileId = tile.id;
+  p.repairAllowed = true;   // 杠后补牌也可复原
+  p.repairUsed = false;
   p.lastWallDraw = null; // 街牌区拿的牌：打出记手切
   log(p.name + ' 杠后从 ' + (sourceSeat === seat ? '自己的' : players[sourceSeat].name + ' 的') + '街牌区拿了 ' + tileText(tile), true);
   sortHands();
@@ -2295,10 +2548,14 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
   phase = 'over';
   const p = players[seat];
   p.revealed = true;
-  const score = isTsumo ? 8 : 4;
+  // 王牌加成：结算总分 ×(1 + 百分比)，见 calcJokerBonus
+  const jokerBonus = calcJokerBonus(p.hand, p.melds);
+  const baseScore = isTsumo ? 8 : 4;
+  const score = Math.round(baseScore * (1 + jokerBonus.pct / 100));
   const winName = isTsumo ? '自摸' : (discarderSeat!=null ? ('荣和（'+players[discarderSeat].name+' 放铳）') : '荣和');
   const tileTxt = winTile ? ('和牌张 ' + tileText(winTile) + '，') : '';
-  log('🎉 ' + p.name + ' ' + winName + ' 和牌！' + tileTxt + '得分 +' + score, true);
+  const bonusTxt = jokerBonus.pct > 0 ? ('王牌加成 +' + jokerBonus.pct + '%，') : '';
+  log('🎉 ' + p.name + ' ' + winName + ' 和牌！' + tileTxt + bonusTxt + '得分 +' + score, true);
   if (isTsumo){
     for (let i=0;i<PLAYER_COUNT;i++) if (i!==seat) log(players[i].name + ' 支付 ' + score + ' 分给 ' + p.name + '（MVP 简化计分）');
   } else if (discarderSeat != null){
@@ -2320,6 +2577,9 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
     isTsumo: !!isTsumo,
     discarderSeat: (discarderSeat != null ? discarderSeat : null),
     score,
+    baseScore,
+    jokerPct: jokerBonus.pct,
+    jokerParts: (jokerBonus.parts || []).slice(),
     hand: p.hand.slice(),
     melds: p.melds.map(m => ({ type: m.type, sub: !!m.sub, how: m.how || 'minkan', tiles: m.tiles.slice() })),
   };
@@ -2340,7 +2600,14 @@ function aiDoTurn(){
     if (findQuad(p.hand)){ doAnkan(currentSeat); return; }
     if (hasKakan(p)){ if (doKakan(currentSeat)) return; } // 补杠未成功则继续出牌
   }
-  // 出牌：打最“孤立”的一张（若本回合出牌进街牌区，避开禁牌）
+  // 同色复原（每回合一次）：能把同色面子修成正常面子就一定修
+  if (!aiTestMode && p.repairAllowed && !p.repairUsed){
+    const fixable = repairCandidates(currentSeat);
+    if (fixable.length > 0){
+      if (doRepair(currentSeat, fixable[0])) return;   // 复原后这张牌就是本回合打出的牌，回合结束
+    }
+  }
+  // 出牌：打最「孤立」的一张（若本回合出牌进街牌区，避开禁牌）
   const discard = aiChooseDiscard(p.hand, drawFromStreet ? bannedStreetKey : null) || p.hand[p.hand.length - 1];
   playerDiscard(currentSeat, discard.id);
 }
@@ -2418,6 +2685,130 @@ function streetPlace(seat, tile){
   render();
   resolveClaims(seat, tile, false);
 }
+// 同色复原（每回合一次）
+let repairPickOpen = false;   // 复原选择窗口是否打开
+
+// 同色面子的「主花色」：出现次数最多的花色；并列时取第一张牌的花色
+function meldMajorSuit(tiles){
+  const cnt = {};
+  for (const t of tiles) cnt[t.suit] = (cnt[t.suit] || 0) + 1;
+  let best = 0;
+  for (const s in cnt) if (cnt[s] > best) best = cnt[s];
+  if (cnt[tiles[0].suit] === best) return tiles[0].suit;
+  for (const s in cnt) if (cnt[s] === best) return s;
+  return tiles[0].suit;
+}
+
+// 列出当前可以被复原的同色面子：手牌里有「主花色的正常牌」可以换掉某张同色牌
+function repairCandidates(seat){
+  const p = players[seat];
+  if (!p) return [];
+  const out = [];
+  for (const m of p.melds){
+    if (!hasSubstitution(m.tiles)){ m.sub = false; continue; }
+    const major = meldMajorSuit(m.tiles);
+    for (const t of m.tiles){
+      if (t.suit === major) continue;                     // 只看同色替换进去的那张
+      const to = p.hand.find(h => h.suit === major && h.rank === t.rank);
+      if (to){ out.push({ meld: m, from: t, to: to, major: major }); break; }
+    }
+  }
+  return out;
+}
+
+// 执行复原：用主花色的正常牌换下同色牌，被换下的同色牌作为本回合打出的牌置入街牌区
+function doRepair(seat, cand){
+  const p = players[seat];
+  if (!p || !cand) return false;
+  if (!p.repairAllowed || p.repairUsed) return false;   // 一回合只能复原一次，防连点
+  if (phase !== 'discarding' || currentSeat !== seat) return false;
+  const m = cand.meld;
+  const idx = m.tiles.findIndex(t => t.id === cand.from.id);
+  if (idx < 0) return false;
+  if (!p.hand.some(h => h.id === cand.to.id)) return false;
+  removeTile(p.hand, cand.to.id);
+  if (seat === 0) applySortToSelf();   // 复原也是打出一张牌，顺手整理手牌
+  m.tiles[idx] = cand.to;
+  m.sub = hasSubstitution(m.tiles);
+  p.repairAllowed = false;
+  p.repairUsed = true;
+  repairPickOpen = false;
+  if (seat === 0){ drawnTileId = null; selectedTileId = null; }
+  pendingDiscard = cand.from;
+  sortHands();
+  rlog(p.name + ' 复原了同色面子，将 ' + tileText(cand.from) + ' 置入了街牌区', true);
+  streetPlace(seat, cand.from);
+  return true;
+}
+
+// 复原按钮 + 选择窗口的渲染
+function renderRepair(){
+  const oldBtn = document.getElementById('repair-btn');
+  if (oldBtn && oldBtn.parentNode) oldBtn.parentNode.removeChild(oldBtn);
+  const sel = document.getElementById('repair-select');
+  if (!sel) return;
+  sel.classList.add('hidden');
+  sel.innerHTML = '';
+
+  const p = players[0];
+  const canAct = players.length > 0 && phase === 'discarding' && currentSeat === 0
+                 && p && p.repairAllowed && !p.repairUsed;
+  const cands = canAct ? repairCandidates(0) : [];
+  if (cands.length === 0){ repairPickOpen = false; return; }
+
+  // 按钮：显示在自己鸣牌区正上方
+  const self = document.getElementById('p-self');
+  if (self){
+    const btn = document.createElement('button');
+    btn.id = 'repair-btn';
+    btn.title = '同色复原（每回合限一次）';
+    btn.addEventListener('click', () => {
+      if (phase !== 'discarding' || currentSeat !== 0) return;
+      if (!players[0] || !players[0].repairAllowed || players[0].repairUsed) return;
+      const list = repairCandidates(0);
+      if (list.length === 0) return;
+      if (list.length === 1){ doRepair(0, list[0]); return; }
+      repairPickOpen = true;
+      render();
+    });
+    self.appendChild(btn);
+  }
+
+  // 有多个可复原面子时，弹出窗口让玩家选一个
+  if (!repairPickOpen || cands.length < 2) return;
+  sel.classList.remove('hidden');
+  const head = document.createElement('div');
+  head.className = 'repair-select-head';
+  head.textContent = '选择要复原的同色面子';
+  sel.appendChild(head);
+
+  const row = document.createElement('div');
+  row.className = 'repair-select-row';
+  for (const cand of cands){
+    const card = document.createElement('button');
+    card.className = 'repair-card';
+    card.title = '把 ' + tileText(cand.from) + ' 换成 ' + tileText(cand.to);
+    for (const t of cand.meld.tiles){
+      const el = tileEl(t, { small: true });
+      if (t.id === cand.from.id) el.classList.add('sub-mark');
+      card.appendChild(el);
+    }
+    const arrow = document.createElement('span');
+    arrow.className = 'repair-arrow';
+    arrow.textContent = '→';
+    card.appendChild(arrow);
+    card.appendChild(tileEl(cand.to, { small: true }));
+    card.addEventListener('click', () => doRepair(0, cand));
+    row.appendChild(card);
+  }
+  sel.appendChild(row);
+
+  const back = document.createElement('button');
+  back.className = 'claim-back-btn';
+  back.title = '返回';
+  back.addEventListener('click', () => { repairPickOpen = false; render(); });
+  sel.appendChild(back);
+}
 // 搭：拿弃牌，把一张自己的牌放入街牌区，不影响行动顺序
 function doDa(seat, tile, discarderSeat){
   const p = players[seat];
@@ -2437,6 +2828,17 @@ function doDa(seat, tile, discarderSeat){
 }
 
 // ---------------- 人类交互 ----------------
+// 放弃自摸/和牌：把牌打出去就等于是拒绝和牌，按规则进入振听（同色张则同色振听）
+function declineTsumoWin(){
+  const c = pendingClaim;
+  if (!c || c.type !== 'tsumo' || c.seat !== 0) return;
+  // 从他人街牌区摸上来的牌，放弃后出牌仍然要放进街牌区（规则②）
+  if (c.tsumoDiscarder != null) drawFromStreet = true;
+  enterFuriten(0);   // 放弃和张 → 进入振听（与之前「过」按钮的行为一致）
+  pendingClaim = null;
+  phase = 'discarding';
+}
+
 function humanClickTile(id){
   if (daGivePending){
     // 搭牌：选一张手牌放入街牌区，然后获得搭到的牌
@@ -2460,17 +2862,21 @@ function humanClickTile(id){
     streetPlace(0, give);
     return;
   }
-  if (phase !== 'discarding' || !players[currentSeat].isHuman) return;
+  // 自摸/和牌提示期间：单击只记录，双击把手牌打出去 = 放弃和牌（进入振听）
+  const tsumoPending = phase === 'claim' && pendingClaim && pendingClaim.type === 'tsumo' && pendingClaim.seat === 0;
+  if (!tsumoPending && (phase !== 'discarding' || !players[currentSeat].isHuman)) return;
   if (currentSeat !== 0) return;
   // 双击出牌：单击仅选中高亮
   const now = Date.now();
   const isDouble = (lastTileClick.id === id) && (now - lastTileClick.time < 450);
   lastTileClick = { id, time: now };
   if (isDouble){
+    if (tsumoPending) declineTsumoWin();
     selectedTileId = null;
     playerDiscard(0, id);
     return;
   }
+  if (tsumoPending) return;   // 自摸提示还在，先不改状态，等玩家决定打哪张
   selectedTileId = (selectedTileId === id) ? null : id;
   render();
 }
@@ -2545,10 +2951,14 @@ function humanDrawBack(){
 }
 
 // ---------------- 渲染 ----------------
-function tileText(t){ return SUIT_GLYPH[t.suit] + rankLabel(t.rank); }
+function tileText(t){ if (isJoker(t)) return t.suit; return SUIT_GLYPH[t.suit] + rankLabel(t.rank); }
 
 // 牌面贴图：A、2~10 用一套；J/Q/K（字牌）每种花色有 4 版，按牌 id 取版
 function faceSrc(t){
+  if (isJoker(t)){
+    const b = (t.copy != null && Number.isFinite(t.copy)) ? t.copy : (Number.isFinite(t.id) ? Math.abs(t.id) : 0);
+    return 'items/DECK/faces/' + t.suit + '_' + ((b % 4) + 1) + '.webp';
+  }
   if (t.rank === 14) return 'items/DECK/faces/' + t.suit + '_A.webp';
   if (t.rank >= 2 && t.rank <= 10) return 'items/DECK/faces/' + t.suit + '_' + t.rank + '.webp';
   if (t.rank >= 11 && t.rank <= 13){
@@ -2565,7 +2975,7 @@ function tileName(t){ return SUIT_NAME[t.suit] + rankLabel(t.rank); }
 // 牌名元素：带花色颜色（红桃/方片 → 红，黑桃/梅花 → 亮色）
 function tileNameEl(t, cls){
   const s = document.createElement('div');
-  s.className = (cls || 'tile-name') + ' ' + (SUIT_RED[t.suit] ? 'name-red' : 'name-black');
+  s.className = (cls || 'tile-name') + ' ' + (isJoker(t) ? 'name-joker' : (SUIT_RED[t.suit] ? 'name-red' : 'name-black'));
   s.textContent = tileText(t);
   return s;
 }
@@ -2577,8 +2987,13 @@ function tileEl(t, opts){
   if (opts.back){
     el.classList.add('back');
   } else {
-    el.classList.add(SUIT_RED[t.suit] ? 'red' : 'black');
-    el.innerHTML = '<span class="rk">'+rankLabel(t.rank)+'</span><span class="st">'+SUIT_GLYPH[t.suit]+'</span>';
+    if (isJoker(t)){
+      el.classList.add('joker');
+      el.innerHTML = '<span class="rk">'+t.suit+'</span>';
+    } else {
+      el.classList.add(SUIT_RED[t.suit] ? 'red' : 'black');
+      el.innerHTML = '<span class="rk">'+rankLabel(t.rank)+'</span><span class="st">'+SUIT_GLYPH[t.suit]+'</span>';
+    }
     const src = faceSrc(t);
     if (src){
       el.classList.add('face');
@@ -2596,12 +3011,39 @@ function meldTileSpecs(m){
   const specs = m.tiles.map(t => ({ t, back: false }));
   if (m.type === 'kong'){
     const how = m.how || 'minkan';
+    const hasJ = m.tiles.some(isJoker);
     if (how === 'ankan'){
-      if (m.sub){ if (specs[2]) specs[2].back = true; }            // 同色暗杠：前两张正面，第 3 张背面，第 4 张同色牌
-      else { for (let i = 0; i < 3; i++) if (specs[i]) specs[i].back = true; } // 暗杠：前 3 张背面，最后 1 张正面
+      if (!hasJ){
+        if (m.sub){ if (specs[2]) specs[2].back = true; }            // 同色暗杠：前两张正面，第 3 张背面，第 4 张同色牌
+        else { for (let i = 0; i < 3; i++) if (specs[i]) specs[i].back = true; } // 暗杠：前 3 张背面，最后 1 张正面
+      } else {
+        // 含王牌的暗杠：有 R 只亮一张 R（其余背面）；Y 在暗杠里始终是背面
+        for (const s of specs) s.back = true;
+        let show = m.tiles.findIndex(t => t.suit === 'R');
+        if (show < 0){
+          for (let i = m.tiles.length - 1; i >= 0; i--){
+            if (!isJoker(m.tiles[i])) { show = i; break; }
+          }
+        }
+        if (show >= 0) specs[show].back = false;
+      }
     } else if (how === 'kakan'){
-      if (m.sub){ if (specs[0]) specs[0].back = true; }             // 同色补杠：第 1 张背面，其余正面
-      else { if (specs[3]) specs[3].back = true; }                  // 补杠：前 3 张正面，补的那张背面
+      // 补杠：亮「补杠的那张」+ 其余牌里出现次数最多的那张，其它盖着
+      for (const s of specs) s.back = true;
+      const last = specs.length - 1;
+      if (specs[last]) specs[last].back = false;
+      const cnt = {};
+      for (let i = 0; i < m.tiles.length - 1; i++){
+        const k = tileKey(m.tiles[i]);
+        cnt[k] = (cnt[k] || 0) + 1;
+      }
+      let bestKey = null, bestN = 0;
+      for (const k in cnt) if (cnt[k] > bestN){ bestN = cnt[k]; bestKey = k; }
+      if (bestKey){
+        for (let i = 0; i < m.tiles.length - 1; i++){
+          if (tileKey(m.tiles[i]) === bestKey){ specs[i].back = false; break; }
+        }
+      }
     }
   }
   return specs;
@@ -2834,6 +3276,16 @@ function render(){
 }
 
 // 和牌弹窗：中间大窗口展示「型」排列的手牌 + 鸣牌区 + 独立的关键张
+// 和牌弹窗里的牌：图片左边加「花色 + 点数」小字（背面牌不加）
+function winTileCell(t, tileNode){
+  const cell = document.createElement('div');
+  cell.className = 'win-tile-cell';
+  if (tileNode.classList.contains('win-key')) cell.classList.add('win-key-cell');
+  cell.appendChild(tileNode);
+  // 背面牌默认不标：只有「王牌」的背面牌在和牌窗口里给出 R / Y 标签
+  if (!tileNode.classList.contains('back') || isJoker(t)) cell.appendChild(tileNameEl(t, 'win-tile-name'));
+  return cell;
+}
 function renderWinModal(){
   const el = document.getElementById('win-modal');
   if (!el) return;
@@ -2864,6 +3316,14 @@ function renderWinModal(){
   subTxt += '得分 +' + info.score;
   sub.textContent = subTxt;
   panel.appendChild(sub);
+  // 王牌加分：把每个王牌面子/将牌的加成列出来
+  if (info.jokerPct > 0 && info.jokerParts && info.jokerParts.length){
+    const jb = document.createElement('div');
+    jb.className = 'win-joker-bonus';
+    const names = info.jokerParts.map(p => p.word + ' +' + p.pct + '%').join('　');
+    jb.textContent = '王牌加成 +' + info.jokerPct + '%　（' + names + '）';
+    panel.appendChild(jb);
+  }
   // 手牌：型排列，关键张独立在最右
   const handRow = document.createElement('div');
   handRow.id = 'win-hand';
@@ -2873,7 +3333,7 @@ function renderWinModal(){
       e.classList.add('win-key');
       e.classList.add('just-drawn');
     }
-    handRow.appendChild(e);
+    handRow.appendChild(winTileCell(t, e));
   }
   panel.appendChild(handRow);
   // 鸣牌区
@@ -2883,7 +3343,7 @@ function renderWinModal(){
     for (const m of info.melds){
       const line = document.createElement('div');
       line.className = 'win-meld-line';
-      for (const spec of meldTileSpecs(m)) line.appendChild(tileEl(spec.t, { back: spec.back }));
+      for (const spec of meldTileSpecs(m)) line.appendChild(winTileCell(spec.t, tileEl(spec.t, { back: spec.back })));
       melds.appendChild(line);
     }
     panel.appendChild(melds);
@@ -2984,12 +3444,13 @@ function hideMeldTip(){
 }
 
 // -------- 牌面抬头显示（悬停显示牌名） --------
-function showTileHud(text, e, isRed){
+function showTileHud(text, e, isRed, isJokerTile){
   const hud = document.getElementById('tile-hud');
   if (!hud) return;
   hud.textContent = text;
-  hud.classList.toggle('suit-red', !!isRed);
-  hud.classList.toggle('suit-black', !isRed);
+  hud.classList.toggle('suit-joker', !!isJokerTile);
+  hud.classList.toggle('suit-red', !isJokerTile && !!isRed);
+  hud.classList.toggle('suit-black', !isJokerTile && !isRed);
   hud.classList.remove('hidden');
   moveTileHud(e);
 }
@@ -3013,7 +3474,7 @@ if (typeof document.addEventListener === 'function'){
   document.addEventListener('mouseover', (e) => {
     const el = e.target && e.target.closest ? e.target.closest('.tile') : null;
     if (!el || el.classList.contains('back') || !el.dataset || !el.dataset.tileName){ hideTileHud(); return; }
-    showTileHud(el.dataset.tileName, e, el.classList.contains('red'));
+    showTileHud(el.dataset.tileName, e, el.classList.contains('red'), el.classList.contains('joker'));
     // 街牌区里的牌：同时弹出街牌区浮空窗（列出该玩家全部街牌）
     try {
       const row = el.closest('.street-row');
@@ -3070,7 +3531,7 @@ function renderActions(){
       // 从他人街牌区摸上来的和牌算荣和（放铳），用「和」按钮；只有自己摸到的才叫自摸
       const isRon = c.tsumoDiscarder != null;
       addPick(isRon ? '和' : '自摸', isRon ? 'win' : 'tsumo', () => humanClaim('win'));
-      add('过', '', () => humanClaim('pass'));
+      // 不放「过」按钮：玩家直接把手牌打出去就是放弃和牌
     } else if (c.type === 'da'){
       add('搭', 'primary', () => humanClaim('da'));
       add('过（放弃）', '', () => humanClaim('pass'));
@@ -3084,6 +3545,7 @@ function renderActions(){
   }
   renderClaimSelect();
   renderStreetSelect();
+  renderRepair();
   renderTenpai();
 }
 
@@ -3332,8 +3794,10 @@ document.getElementById('back-menu').addEventListener('click', backToMenu);
 
 // 暴露给自动化测试 / 调试（不影响正常游玩）
 window.__game = {
-  startGame, humanClickTile, humanClaim, humanClaimOption, humanDraw, streetPickFrom, canWin, canWinStrict, isNormalTile, winningTiles, winningTilesStrict, playerDraw, declareWin, onDeclineRon, applySortToSelf, patternSortTiles, doKakan, doAnkan, kongDraw, collectClaimOptions,
+  startGame, humanClickTile, humanClaim, humanClaimOption, humanDraw, streetPickFrom, canWin, canWinStrict, isNormalTile, winningTiles, winningTilesStrict, playerDraw, declareWin, onDeclineRon, applySortToSelf, patternSortTiles, doKakan, doAnkan, kongDraw, collectClaimOptions, repairCandidates, doRepair, meldMajorSuit, render, aiDoTurn, calcJokerBonus, jokerMeldBonus, isJoker, canWinWithJokers,
   setSortMode(m){ sortMode = m; },
+  setCurrentSeat(s){ currentSeat = s; },
+  setPhase(v){ phase = v; },
   setAiTestMode(v){ aiTestMode = v; },
   get state(){ return { players, wall, dealerSeat, currentSeat, phase, pendingClaim, drawChoice, drawFromStreet, streetPick }; },
 };
