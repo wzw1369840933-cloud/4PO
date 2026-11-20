@@ -630,10 +630,17 @@
   #tenpai-tip.hidden { display: none; }
   .tenpai-head { font-size: 13px; color: #ffe6a7; font-weight: 700; margin-bottom: 6px; }
   .tenpai-item { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 13px; color: #d7ecdf; }
-  .tenpai-item .tile.small { width: 24px; height: 31px; }
-  .tenpai-item .tile.small .rk { font-size: 12px; }
-  .tenpai-item .tile.small .st { font-size: 10px; }
+  .tenpai-item .tile.small { width: 32px; height: 48px; }   /* 与鸣牌区同样大小 */
+  .tenpai-item .tile.small .rk { font-size: 15px; }
+  .tenpai-item .tile.small .st { font-size: 13px; }
   .tenpai-count { color: #7fd4a4; font-weight: 700; }
+  .tenpai-item .tenpai-tile-name {
+    font-size: 13px; font-weight: 800; line-height: 1;
+    white-space: nowrap; text-shadow: 0 1px 3px rgba(0,0,0,.9);
+  }
+  .tenpai-item .tenpai-tile-name.name-black { color: #FEFFCC; }
+  .tenpai-item .tenpai-tile-name.name-red { color: #ff6a5c; }
+  .tenpai-item .tenpai-tile-name.name-joker { color: #C373FF; }
 
   #sort-toggle {
     position: absolute; left: 0; top: calc(82% + 62px); transform: translateY(-50%);
@@ -1643,6 +1650,8 @@ function renderTenpai(){
   for (const w of wins){
     const item = document.createElement('div');
     item.className = 'tenpai-item';
+    // 牌面左边加上对应颜色的小字（如 ♥Q）
+    item.appendChild(tileNameEl(w, 'tenpai-tile-name'));
     item.appendChild(tileEl(w, { small:true }));
     const cnt = document.createElement('span');
     cnt.className = 'tenpai-count';
