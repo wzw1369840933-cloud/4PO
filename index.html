@@ -421,8 +421,8 @@
      左家：从上到下 抬头 → 手牌 → 鸣牌 → 街牌区；右家完全倒过来。 */
   #p-right .street-row { order: 1; flex-direction: row-reverse; }
   #p-right .street-label { margin-right: 0; margin-left: 4px; }
-  #p-right .meld-row { order: 2; flex-direction: column-reverse; }
-  #p-right .meld-line { flex-direction: row-reverse; }
+  #p-right .meld-row { order: 2; flex-direction: row-reverse; }
+  #p-right .meld-line { flex-direction: column-reverse; }
   #p-right .hand-row { order: 3; }
   #p-right .p-head { order: 4; }
 
@@ -584,8 +584,21 @@
   .hand-row.side-hand .tile + .tile { margin-top: var(--sideOverlap, -20px); }
   .meld-row { display: flex; flex-wrap: wrap; gap: 2px; min-height: 30px; }
   .meld-row.side-meld .tile.small { flex: 0 0 auto; }
-  .meld-row.side-meld { flex-direction: column; flex-wrap: nowrap; align-items: center; gap: 3px; min-height: 0; }
+  /* 左右家鸣牌：一组一条竖线（牌转 90°/270°，和该玩家手牌同方向），多组并排 */
+  .meld-row.side-meld {
+    flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center;
+    gap: 6px; min-height: 0; max-width: 100%;
+  }
   .meld-line { display: flex; gap: 2px; }
+  .meld-row.side-meld .meld-line {
+    flex-direction: column; flex-wrap: nowrap; align-items: center; justify-content: center;
+    gap: 0; width: 48px;   /* 旋转后的可视牌宽 */
+  }
+  .meld-row.side-meld .meld-line .tile.small { transform: rotate(90deg); }
+  #p-left .meld-row.side-meld .meld-line .tile.small { transform: rotate(270deg); }
+  /* 牌盒是 32×48，转 90° 后可视高只有 32；用负边距把竖排的牌贴合起来（留 2px 缝） */
+  .meld-row.side-meld .meld-line .tile.small + .tile.small { margin-top: -14px; }
+  #p-right .meld-row.side-meld .meld-line .tile.small + .tile.small { margin-top: 0; margin-bottom: -14px; }
   .discard-row { display: flex; flex-wrap: wrap; gap: 1px; align-content: flex-start; }
 
   /* 牌面贴图：整张贴满牌面，文字隐藏（保留 DOM 便于检索/测试） */
