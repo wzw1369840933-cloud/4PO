@@ -458,15 +458,36 @@
     top: 50%;
     transform: translateY(-50%);
   }
+  /* ===== 副牌河：主牌河满了以后往这里放（8 张/行 × 4 行 = 32）===== */
+  .river-zone.river-sub { gap: 1px; overflow: hidden; }
+  .river-zone.river-sub .tile.small { width: 32px; height: 48px; }
+  .river-zone.river-sub .tile.small .rk { font-size: 14px; }
+  .river-zone.river-sub .tile.small .st { font-size: 12px; }
+  .river-zone.river-sub {
+    width: 263px;   /* 8 × 32 + 7 × 1 */
+    height: 195px;  /* 4 × 48 + 3 × 1 */
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    justify-content: flex-start;
+  }
+  /* 上家副牌河：右上角 */
+  #river-sub-2 { right: 4px; top: 0; }
+  /* 左家副牌河：左上角 */
+  #river-sub-3 { left: 4px; top: 0; }
+  /* 你（下家）副牌河：左下角 */
+  #river-sub-0 { left: 4px; bottom: 0; }
+  /* 右家副牌河：右下角 */
+  #river-sub-1 { right: 4px; bottom: 0; }
   /* 最新打出的一张：金边高亮 */
   .river-zone .tile.small.river-latest {
     border: 2px solid var(--gold);
     box-shadow: 0 0 8px rgba(233,196,106,.85);
   }
-  .river-zone .tile.small { width: 32px; height: 48px; }
+  .river-zone .tile.small { width: 36px; height: 54px; }   /* 主牌河：8 张/行 × 4 行 = 32 */
   /* 左右两家牌河：牌横放（麻将习惯） */
   .river-rot {
-    width: 48px; height: 32px;
+    width: 54px; height: 36px;
     display: flex; align-items: center; justify-content: center;
   }
   .river-rot > .tile.small { transform: rotate(90deg); }
@@ -475,8 +496,8 @@
   /* 左右家牌河区：6 列 × 7 行 = 42 张容量 */
   #river-3 { width: 250px; height: 306px; }
   #river-1 { width: 250px; height: 306px; }
-  .river-zone .tile.small .rk { font-size: 14px; }
-  .river-zone .tile.small .st { font-size: 12px; }
+  .river-zone .tile.small .rk { font-size: 16px; }
+  .river-zone .tile.small .st { font-size: 13px; }
 
   .p-head { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 2px 0; }
   .dealer-dot {
@@ -1034,6 +1055,10 @@
       <div class="river-zone" id="river-3"></div>
       <div class="river-zone" id="river-1"></div>
       <div class="river-zone" id="river-0"></div>
+      <div class="river-zone river-sub" id="river-sub-2"></div>
+      <div class="river-zone river-sub" id="river-sub-3"></div>
+      <div class="river-zone river-sub" id="river-sub-1"></div>
+      <div class="river-zone river-sub" id="river-sub-0"></div>
     </div>
     <div id="river-center">
       <div class="wall-label">牌墙剩余</div>
@@ -3230,23 +3255,30 @@ function render(){
   }
 
   // 中间牌河（俯瞰视角，每人一格，往中间聚拢）
+  // 主牌河 32 张（8×4），放满后溢出到副牌河 32 张（8×4）
+  const RIVER_MAIN_CAP = 32;
   for (let seat = 0; seat < PLAYER_COUNT; seat++){
     const zone = document.getElementById('river-' + seat);
-    zone.innerHTML = '';
-    for (const t of players[seat].discards){
+    const subZone = document.getElementById('river-sub-' + seat);
+    if (zone) zone.innerHTML = '';
+    if (subZone) subZone.innerHTML = '';
+    players[seat].discards.forEach((t, idx) => {
+      const target = idx < RIVER_MAIN_CAP ? zone : subZone;
+      if (!target) return;
       const el = tileEl(t, { small:true });
       if (seat === 1 || seat === 3){
         // 左右两家的牌横放：左家顺时针转 90°，右家逆时针转 90°（麻将习惯）
         const wrap = document.createElement('div');
         wrap.className = 'river-rot ' + (seat === 3 ? 'rot-cw' : 'rot-ccw');
         wrap.appendChild(el);
-        zone.appendChild(wrap);
+        target.appendChild(wrap);
       } else {
-        zone.appendChild(el);
+        target.appendChild(el);
       }
-    }
+    });
     // 最新打出的一张高亮
-    const lastNode = zone.lastElementChild;
+    const lastZone = players[seat].discards.length > RIVER_MAIN_CAP ? subZone : zone;
+    const lastNode = lastZone ? lastZone.lastElementChild : null;
     const latest = lastNode && lastNode.classList && lastNode.classList.contains('river-rot') ? lastNode.children[0] : lastNode;
     if (latest && latest.classList) latest.classList.add('river-latest');
   }
