@@ -423,7 +423,7 @@
     align-items: flex-end;        /* 镜像后整体贴右 */
     justify-content: flex-start;
     padding-top: 23px;            /* 手牌与上边框的距离，和自己贴底边保持一致 */
-    padding-bottom: 25px;         /* 鸣牌区改为绝对定位后补回高度，保持牌河位置不变 */
+    padding-bottom: 20px;         /* 鸣牌区改为绝对定位后补回高度，保持牌河位置不变（手牌 +5px 后同步 -5px） */
   }
   #p-top .hand-row { order: 1; flex-direction: row-reverse; }
   #p-top .p-head { order: 2; }
@@ -648,14 +648,14 @@
   .tile.small { width: 32px; height: 48px; flex-direction: column; }
   .tile.small .rk { font-size: 14px; line-height: 1; }
   .tile.small .st { font-size: 12px; line-height: 1; }
-  .tile.big { width: 59px; height: 91px; flex-direction: column; cursor: pointer; transition: transform .08s; }
+  .tile.big { width: 64px; height: 96px; flex-direction: column; cursor: pointer; transition: transform .08s; }
   .tile.big .rk { font-size: 24px; }
   .tile.big .st { font-size: 19px; }
   .tile.big:hover { transform: translateY(-6px); box-shadow: 0 4px 8px rgba(0,0,0,.5); }
   .hand-row .tile.big + .tile.big { margin-left: -8px; }
   /* 和牌亮牌：紧凑展示，整手牌放进一行；关键张（和牌张）隔开放在最右，和摸牌时一样 */
   .hand-row.reveal-compact { gap: 1px; }
-  .hand-row.reveal-compact .tile.big { width: 59px; height: 91px; }
+  .hand-row.reveal-compact .tile.big { width: 64px; height: 96px; }
   .hand-row.reveal-compact .tile.big .rk { font-size: 24px; }
   .hand-row.reveal-compact .tile.big .st { font-size: 19px; }
   .hand-row.reveal-compact .tile.big + .tile.big { margin-left: -6px; }
@@ -723,7 +723,7 @@
   .claim-tile-name { font-size: 13px; font-weight: 800; text-shadow: 0 0 3px rgba(0,0,0,.9); }
   #meld-tip .street-tip-name { text-shadow: 0 0 3px rgba(0,0,0,.95), 0 1px 4px rgba(0,0,0,.9); }
   /* 鸣牌区浮空窗的牌与手牌同尺寸 */
-  #meld-tip .tile.small { width: 59px; height: 91px; }
+  #meld-tip .tile.small { width: 64px; height: 96px; }
   #meld-tip .street-tip-name { font-size: 15px; }
   .street-tip-head { width: 100%; font-size: 11px; color: #7fd4a4; margin-bottom: 3px; }
 
@@ -3369,7 +3369,7 @@ function render(){
   // 左右两家的竖排手牌：等整桌渲染完成后再统一测量（避免顶行高度变化导致两侧计算不一致），
   // 取更挤的一边作为两侧共同的重叠量，保证两边手牌等高、对齐。
   if (typeof document.getElementById('p-left').getBoundingClientRect === 'function'){
-    const TILE_BOX = 91, TILE_VIS = 59; // big 牌盒高 / 旋转后可视高
+    const TILE_BOX = 96, TILE_VIS = 64; // big 牌盒高 / 旋转后可视高
     let worst = null;
     for (const seat of [1, 3]){
       const ref = sideRefs[seat];
