@@ -1319,7 +1319,7 @@
 
         <h3>摸牌规则（当前已实装 ①②）</h3>
         <p>① 从牌堆顶摸一张；② 从一名玩家街牌区顶拿一张（弹窗选择从谁的街牌区拿）——拿别人的算被放铳、拿自己的算自摸，本回合打出的牌要放入自己的街牌区。③④ 尚未实装。</p>
-        <p><b>牌堆摸完</b>：不再直接流局。轮到的玩家从街牌区顶摸一张（<b>优先别人的，别人都空了才摸自己的</b>），并<b>直接打进自己的牌河</b>；此阶段全场禁用<b>搭</b>和<b>同色替代</b>。当牌堆与四家街牌区都空时，才流局。</p>
+        <p><b>牌堆摸完</b>：不再直接流局。轮到的玩家从街牌区顶摸一张（<b>优先别人的，别人都空了才摸自己的</b>；人类会弹出窗口，从其他三家里自己挑），并<b>直接打进自己的牌河</b>；此阶段全场禁用<b>搭</b>和<b>同色替代</b>。当牌堆与四家街牌区都空时，才流局。</p>
         <p><b>街牌区</b>：以任何方式置入街牌区的牌（搭、同色鸣牌、规则②出牌等）都视为打出牌，可被<b>碰 / 吃 / 杠 / 和</b>（不可被搭）。同一圈内街牌区<b>跨局保留</b>，不洗回牌堆；开新一圈才洗回。</p>
 
         <h3>王牌（R 大王 / Y 小王）</h3>
@@ -1920,6 +1920,7 @@ let drawnTileId = null;     // 人类本回合新摸到的牌 id（放最右并�
 let drawChoice = false;     // 人类摸牌阶段待选择（摸牌堆 or 街牌区）
 let drawFromStreet = false; // 本回合出牌时改为放入自己街牌区（规则② / 同色鸣牌）
 let streetPick = false;     // 人类正在选择从哪个街牌区拿牌（规则②窗口）
+let wallEndPick = false;    // 牌堆空后：人类正在选择从谁的街牌区摸牌（直接打牌河）
 let kongPickPending = false; // street-select 窗口用于杠后补牌选择
 let kongPickSub = false;     // 杠后补牌的同色标记
 let winInfo = null;          // 和牌弹窗信息 { seat, winTile, isTsumo, discarderSeat, score, hand, melds }
@@ -2098,7 +2099,7 @@ function startGame(opts){
   currentSeat = dealerSeat;
   phase = 'discarding';
   pendingClaim = null; pendingDiscard = null; daGivePending = false;
-  drawChoice = false; drawFromStreet = false; streetPick = false; bannedStreetKey = null;
+  drawChoice = false; drawFromStreet = false; streetPick = false; wallEndPick = false; bannedStreetKey = null;
   discardCount = 0;
   sortHands();
   applySortToSelf();
@@ -2446,15 +2447,22 @@ function playerDraw(seat){
 
 // 牌堆为空：不再直接流局，改为从街牌区顶摸一张并「直接打入牌河」。
 // 优先摸其他玩家（按顺位），其他人都空了才摸自己；牌堆和四家街牌区都空才流局。
-function wallStreetDiscard(seat){
-  if (wall.length > 0){ playerDraw(seat); return; }
-  let src = null;
+// 牌堆为空：可选的街牌区（优先其他玩家；其他人都空了才轮到自己）
+function wallStreetSources(seat){
+  const out = [];
   for (let i = 1; i < PLAYER_COUNT; i++){
     const s = (seat + i) % PLAYER_COUNT;
-    if (s !== seat && players[s].street.length > 0){ src = s; break; }
+    if (s !== seat && players[s].street.length > 0) out.push(s);
   }
-  if (src == null && players[seat].street.length > 0) src = seat;
-  if (src == null){ gameDraw(); return; }
+  if (out.length === 0 && players[seat].street.length > 0) out.push(seat);
+  return out;
+}
+function wallStreetDiscardFrom(seat, src){
+  if (wall.length > 0){ playerDraw(seat); return; }
+  if (src == null || !players[src] || players[src].street.length === 0){
+    wallStreetDiscard(seat);
+    return;
+  }
   const p = players[seat];
   const tile = players[src].street.pop();
   p.discards.push(tile);
@@ -2463,6 +2471,27 @@ function wallStreetDiscard(seat){
   log(p.name + ' 牌堆已空，从' + (src === seat ? '自己的' : players[src].name + ' 的') + '街牌区摸 ' + tileText(tile) + ' 直接打入牌河', true);
   render();
   resolveClaims(seat, tile, false);
+}
+function wallStreetDiscard(seat){
+  if (wall.length > 0){ playerDraw(seat); return; }
+  const sources = wallStreetSources(seat);
+  if (sources.length === 0){ gameDraw(); return; }
+  if (seat === 0){
+    // 人类：和规则②一样弹窗，从其他三家的街牌区里挑
+    phase = 'street-pick';
+    streetPick = true;
+    wallEndPick = true;
+    kongPickPending = false;
+    render();
+    return;
+  }
+  wallStreetDiscardFrom(seat, sources[0]);
+}
+function wallEndPickFrom(sourceSeat){
+  wallEndPick = false;
+  streetPick = false;
+  phase = 'discarding';
+  wallStreetDiscardFrom(0, sourceSeat);
 }
 
 function playerDiscard(seat, tileId){
@@ -2588,6 +2617,7 @@ function advanceTurn(){
   pendingClaim = null; pendingDiscard = null; daGivePending = false;
   bannedStreetKey = null;
   selectedTileId = null;
+  wallEndPick = false;
   // 牌堆已空：改为从街牌区摸牌并直接打入牌河（不走摸牌选择）
   if (wall.length === 0){ wallStreetDiscard(currentSeat); return; }
   // 摸牌优先级：牌堆 → 他人街牌区 → 自己街牌区；人类可在此选择
@@ -3677,6 +3707,8 @@ function render(){
   let hint = '';
   if (phase === 'over'){
     hint = '本局结束，点击下方按钮继续';
+  } else if (wallEndPick){
+    hint = '牌堆已空：选择从谁的街牌区摸牌，牌会直接打进牌河';
   } else if (streetPick){
     hint = '选择从哪个街牌区拿顶牌';
   } else if (drawChoice){
@@ -4099,12 +4131,15 @@ function renderStreetSelect(){
   if (streetPick){
     const head = document.createElement('div');
     head.className = 'claim-select-head';
-    head.textContent = kongPickPending ? '杠后补牌：选择从哪个街牌区顶摸' : '选择从哪个街牌区拿牌';
+    head.textContent = wallEndPick
+      ? '牌堆已空：选择从谁的街牌区摸牌（直接打入牌河）'
+      : (kongPickPending ? '杠后补牌：选择从哪个街牌区顶摸' : '选择从哪个街牌区拿牌');
     el.appendChild(head);
     const row = document.createElement('div');
     row.className = 'claim-select-row';
-    for (let s = 0; s < PLAYER_COUNT; s++){
-      if (s === 0){
+    const sources = wallEndPick ? wallStreetSources(0) : [0, 1, 2, 3];
+    for (const s of sources){
+      if (!wallEndPick && s === 0){
         // 自己街牌区：杠后补牌时可选；普通摸牌时只有“仅自己街牌区有牌”才可选
         if (!kongPickPending && anyOpponentStreet()) continue;
       }
@@ -4115,7 +4150,7 @@ function renderStreetSelect(){
       const lbl = document.createElement('span');
       lbl.className = 'street-card-label';
       let lblTxt = players[s].name;
-      if (s === 0){
+      if (!wallEndPick && s === 0){
         // 从自己街牌区摸牌的窗口：只有摸上来能直接和牌时，才标「自摸」
         const st0 = players[0].street;
         const top = st0[st0.length - 1];
@@ -4125,13 +4160,14 @@ function renderStreetSelect(){
       card.appendChild(lbl);
       card.appendChild(tileEl(st[st.length - 1], { small:true }));
       card.addEventListener('click', () => {
-        if (kongPickPending) kongStreetPickFrom(s);
+        if (wallEndPick) wallEndPickFrom(s);
+        else if (kongPickPending) kongStreetPickFrom(s);
         else streetPickFrom(s);
       });
       row.appendChild(card);
     }
     el.appendChild(row);
-    if (!kongPickPending){
+    if (!kongPickPending && !wallEndPick){
       const backBtn = document.createElement('button');
       backBtn.className = 'claim-back-btn';
       backBtn.title = '返回（改摸牌堆）';
@@ -4347,7 +4383,7 @@ document.getElementById('back-menu').addEventListener('click', backToMenu);
 // 暴露给自动化测试 / 调试（不影响正常游玩）
 window.__game = {
   startGame, humanClickTile, humanClaim, humanClaimOption, humanDraw, streetPickFrom, canWin, canWinStrict, isNormalTile, winningTiles, winningTilesStrict, playerDraw, declareWin, onDeclineRon, applySortToSelf, patternSortTiles, doKakan, doAnkan, kongDraw, collectClaimOptions, repairCandidates, doRepair, meldMajorSuit, render, aiDoTurn, calcJokerBonus, jokerMeldBonus, isJoker, canWinWithJokers,
-  startRound, nextHand, dealerAdvance, handEndsRound, recordHandResult, wallStreetDiscard,
+  startRound, nextHand, dealerAdvance, handEndsRound, recordHandResult, wallStreetDiscard, wallStreetSources, wallEndPickFrom, tileEl, meldTileSpecs,
   getRound(){ return { active: roundActive, no: roundNo, handNo, passed: roundPassed.slice(), wins: roundWins.slice(), draws: roundDraws, ended: roundEnded, summaryOpen: roundSummaryOpen, result: handResult, title: streetTitle(), tenure: dealerTenureHands }; },
   setSortMode(m){ sortMode = m; },
   setCurrentSeat(s){ currentSeat = s; },
