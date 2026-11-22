@@ -340,6 +340,19 @@
   .rules-body ul { margin: 4px 0 4px 20px; color: #d7ecdf; }
   .rules-body li { margin: 3px 0; }
   .rules-body b { color: #ffe6a7; }
+  /* 规则里的杠子亮牌示例 */
+  .kong-case { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 4px; }
+  .kong-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 6px 8px; background: rgba(255,255,255,.05); border-radius: 8px;
+  }
+  .kong-info { width: 220px; flex: 0 0 auto; }
+  .kong-name { font-size: 14px; font-weight: 800; color: #ffe6a7; line-height: 1.25; }
+  .kong-note { font-size: 12px; color: #9fc9b1; line-height: 1.35; margin-top: 2px; }
+  .kong-tiles { display: flex; gap: 3px; flex-wrap: wrap; }
+  .kong-tiles .tile { width: 40px; height: 60px; }
+  .kong-tiles .tile .rk { font-size: 16px; }
+  .kong-tiles .tile .st { font-size: 14px; }
 
   /* 牌桌外框：独立区块，边框图铺在这里 */
   #table-frame {
@@ -1298,6 +1311,7 @@
           <li><b>顺子</b>：3 张同花色、连续的数牌（<b>仅 2~10</b>，如 ♠234、♠8910）；A 可当作 1，与 2、3 组成顺子（♠A♠2♠3）。</li>
           <li><b>杠</b>：4 张同点数的牌（同花色，或同色 3+1；明杠 / 暗杠 / 补杠）。</li>
         </ul>
+        <div class="kong-case" data-kong-group="normal"></div>
 
         <h3>将牌</h3>
         <p>2 张同花色、同点数/字母的牌（如 ♥9♥9）；和牌时也允许<b>同色不同花</b>作将（如 ♥9♦9）。</p>
@@ -1314,6 +1328,7 @@
         <p><b>多种鸣牌时</b>：手牌区上方会弹出选择窗口，列出所有可鸣类型（如 ♣3 可同时 碰333 / 吃A23 / 吃234 / 吃345），点选其一即可。</p>
         <p><b>同色替换</b>：♠♣ 为黑、♥♦ 为红；碰 / 吃 / 杠 / 和都可以用同色不同花替代（如 ♠A♠A♣A、♠3♣4♠5），杠最多替代一张（4-0 或 3-1）。放弃同色和张会进入同色振听；鸣出同色面子后，摸牌时可以「复原」。</p>
         <p><b>同色和牌</b>：听同色张时，例如听 ♠3，则 ♣3 与 ♠3 都可以和。</p>
+        <div class="kong-case" data-kong-group="sub"></div>
         <p><b>搭</b>：任意玩家可拿走别家刚打出的牌（无匹配要求），但须把自己的一张牌放入「街牌区」，且<b>不影响行动顺序</b>。</p>
         <p><b>搭的惩罚</b>：如果玩家在<b>一巡内使用过两次搭</b>，则会进入惩罚 —— <b>两私巡内不能搭、不能鸣牌、只能自摸和牌，且打出的牌自动置入街牌区</b>。</p>
 
@@ -1336,6 +1351,7 @@
           <li><b>刻子</b>：RRR +150%、RRY +125%、RYY +100%、YYY +75%</li>
           <li><b>杠子</b>：RRRR +200%、RRRY +175%、RRYY +150%、RYYY +125%、YYYY +100%</li>
         </ul>
+        <div class="kong-case" data-kong-group="joker"></div>
         <p>多个王牌面子/将牌的加成<b>叠加</b>：例如同时有 RYYY 的杠（+125%）与 RY 的将（+25%），结算总分 +150%。</p>
 
         <h3>同色复原（每回合限一次）</h3>
@@ -4215,8 +4231,62 @@ document.getElementById('restart').addEventListener('click', () => {
   startRound();
 });
 document.getElementById('rules-btn').addEventListener('click', () => {
+  renderKongDemos();
   document.getElementById('rules-overlay').classList.remove('hidden');
 });
+// 规则里的杠子亮牌示例：用真实牌面渲染
+function buildKongDemoRow(name, note, how, sub, tiles){
+  const row = document.createElement('div');
+  row.className = 'kong-row';
+  const info = document.createElement('div');
+  info.className = 'kong-info';
+  const n = document.createElement('div');
+  n.className = 'kong-name';
+  n.textContent = name;
+  const d = document.createElement('div');
+  d.className = 'kong-note';
+  d.textContent = note;
+  info.appendChild(n); info.appendChild(d);
+  const box = document.createElement('div');
+  box.className = 'kong-tiles';
+  for (const spec of meldTileSpecs({ type:'kong', how, sub: !!sub, tiles })){
+    box.appendChild(tileEl(spec.t, { small:true, back: spec.back }));
+  }
+  row.appendChild(info); row.appendChild(box);
+  return row;
+}
+function renderKongDemos(){
+  if (typeof document.querySelector !== 'function') return;
+  let id = 700000;
+  const T = (s, r) => ({ id: id++, suit: s, rank: r });
+  const groups = {
+    normal: [
+      ['明杠（普通）', '4 张全部亮出', 'minkan', false, [T('h',5),T('h',5),T('h',5),T('h',5)]],
+      ['暗杠（普通）', '前 3 张盖住，最后 1 张亮出', 'ankan', false, [T('s',7),T('s',7),T('s',7),T('s',7)]],
+      ['补杠（普通）', '补的那张 + 最常见的一张亮，其余背面', 'kakan', false, [T('c',9),T('c',9),T('c',9),T('c',9)]],
+    ],
+    sub: [
+      ['同色明杠（3+1）', '4 张全亮，异花那张是替代', 'minkan', true, [T('h',5),T('h',5),T('h',5),T('d',5)]],
+      ['同色暗杠', '第 1/2/4 张亮，第 3 张背面', 'ankan', true, [T('h',5),T('h',5),T('h',5),T('d',5)]],
+      ['同色补杠', '补张 + 最常见的一张亮，其余背面', 'kakan', true, [T('h',5),T('h',5),T('d',5),T('h',5)]],
+    ],
+    joker: [
+      ['王牌明杠 RRRR', '4 张全亮', 'minkan', false, [T('R',0),T('R',0),T('R',0),T('R',0)]],
+      ['王牌明杠 RRRY', '4 张全亮', 'minkan', false, [T('R',0),T('R',0),T('R',0),T('Y',0)]],
+      ['王牌暗杠 RRRR', '只亮 1 张 R，其余背面', 'ankan', false, [T('R',0),T('R',0),T('R',0),T('R',0)]],
+      ['王牌暗杠 RRRY', '只亮 1 张 R，其余背面', 'ankan', false, [T('R',0),T('R',0),T('R',0),T('Y',0)]],
+      ['王牌暗杠 YYYY', '全部背面，不露 Y', 'ankan', false, [T('Y',0),T('Y',0),T('Y',0),T('Y',0)]],
+      ['王牌补杠 RRRY', '补的末张 + 一张 R 亮，其余背面', 'kakan', false, [T('R',0),T('R',0),T('R',0),T('Y',0)]],
+    ],
+  };
+  for (const key in groups){
+    const host = document.querySelector('.kong-case[data-kong-group="' + key + '"]');
+    if (!host || host.children.length > 0) continue;
+    for (const [name, note, how, sub, tiles] of groups[key]){
+      host.appendChild(buildKongDemoRow(name, note, how, sub, tiles));
+    }
+  }
+}
 // 和牌牌型：暂未开放，先给出提示（后续可接独立的牌型一览面板）
 document.getElementById('pattern-btn').addEventListener('click', () => {
   showMenuToast('和牌牌型一览暂未开放');
