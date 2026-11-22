@@ -1282,6 +1282,7 @@
           <li><b>下庄</b>：流局，或别家和牌（含一炮多响）→ 庄家传给下家（你 → AI·右 → AI·上 → AI·左 → 你）。</li>
           <li>四家都坐过庄、并且都下过庄后，<b>一圈结束</b>；结算面板里点「开新一圈」，庄家重新随机。</li>
           <li><b>街牌区跨局保留</b>：同一圈内，每局开始时街牌区里的牌不会洗回牌堆，原样留到下一局；只有开新一圈才全部洗回。</li>
+          <li><b>街牌区太多时</b>：如果发牌前牌堆不够 53 张，会让每家把街牌区随机一半（四舍五入）洗回牌堆，再发牌。</li>
           <li>中央「牌墙剩余」下方显示当前街名：<b>壹道春一街</b>（第 1 圈、第 1 个庄家、第 1 局）→ 连庄 <b>壹道春二街</b> → 下庄后 <b>壹道夏一街</b> → 秋 → 冬；第二圈就是 <b>贰道春一街</b>。</li>
         </ul>
 
@@ -1289,7 +1290,7 @@
         <p>4 副扑克牌（♠♥♦♣ × 2~10 / J / Q / K / A，共 208 张）+ 王牌 <b>R 4 张、Y 4 张</b>，合计 <b>216 张</b>。</p>
 
         <h3>和牌条件</h3>
-        <p>4 副面子 + 1 对将牌，共 14 张（每副面子占 3 张，杠占 4 张时按 1 副面子计）。可以荣和或自摸；支持多家同时荣和、抢杠和；牌墙摸完无人和牌则流局。</p>
+        <p>4 副面子 + 1 对将牌，共 14 张（每副面子占 3 张，杠占 4 张时按 1 副面子计）。可以荣和或自摸；支持多家同时荣和、抢杠和；牌堆与四家街牌区都摸完仍无人和牌，才算流局。</p>
 
         <h3>面子（可组合的牌型）</h3>
         <ul>
@@ -1318,6 +1319,7 @@
 
         <h3>摸牌规则（当前已实装 ①②）</h3>
         <p>① 从牌堆顶摸一张；② 从一名玩家街牌区顶拿一张（弹窗选择从谁的街牌区拿）——拿别人的算被放铳、拿自己的算自摸，本回合打出的牌要放入自己的街牌区。③④ 尚未实装。</p>
+        <p><b>牌堆摸完</b>：不再直接流局。轮到的玩家从街牌区顶摸一张（<b>优先别人的，别人都空了才摸自己的</b>），并<b>直接打进自己的牌河</b>；此阶段全场禁用<b>搭</b>和<b>同色替代</b>。当牌堆与四家街牌区都空时，才流局。</p>
         <p><b>街牌区</b>：以任何方式置入街牌区的牌（搭、同色鸣牌、规则②出牌等）都视为打出牌，可被<b>碰 / 吃 / 杠 / 和</b>（不可被搭）。同一圈内街牌区<b>跨局保留</b>，不洗回牌堆；开新一圈才洗回。</p>
 
         <h3>王牌（R 大王 / Y 小王）</h3>
@@ -1900,6 +1902,8 @@ function collectClaimOptions(seat, tile, discarderSeat){
     const tiles = [tile, ...o.tiles];
     opts.push({ type:'chi', tiles, sub: hasSubstitution(tiles), offset, rank: claimRank('chi', hasSubstitution(tiles), offset) });
   }
+  // 牌堆已空：全员禁用同色替代（只保留不吃替代的鸣牌）
+  if (wall.length === 0) return opts.filter(o => !o.sub);
   return opts;
 }
 
@@ -2041,15 +2045,31 @@ function buildDeckWithoutStreet(streets){
 // opts: { dealer, streets } —— 不传时保持旧行为（庄家 0、街牌区为空），方便测试
 function startGame(opts){
   opts = opts || {};
-  const carry = (opts.streets || [[],[],[],[]]).map(st => (st || []).slice());
+  let carry = (opts.streets || [[],[],[],[]]).map(st => (st || []).slice());
   const need = START_TILES * PLAYER_COUNT + 1;
   let deck = buildDeckWithoutStreet(carry);
-  let useCarry = carry;
   if (deck.length < need){
-    // 街牌区攒得太多、牌堆发不出牌：保底整副重开，街牌洗回
-    log('街牌区里的牌太多，牌堆不够发牌，本局改为整副重开（街牌暂时洗回）。', true);
-    deck = makeDeck();
-    useCarry = [[],[],[],[]];
+    // 街牌区攒得太多、牌堆不够发牌：每家街牌区随机一半（四舍五入）洗回牌堆
+    let returned = 0;
+    const returnHalf = (st) => {
+      const n = Math.round(st.length / 2);
+      for (let k = 0; k < n && st.length; k++){
+        const idx = Math.floor(Math.random() * st.length);
+        deck.push(st.splice(idx, 1)[0]);
+        returned++;
+      }
+    };
+    while (deck.length < need){
+      const before = returned;
+      for (const st of carry) returnHalf(st);
+      if (returned === before) break;
+    }
+    log('街牌区里的牌太多，每家随机一半（共 ' + returned + ' 张）洗回牌堆。', true);
+    if (deck.length < need){
+      // 极端保底：整副重开
+      deck = makeDeck();
+      carry = [[],[],[],[]];
+    }
   }
   shuffle(deck);
   winInfo = null;
@@ -2061,7 +2081,7 @@ function startGame(opts){
     newPlayer('AI·上', 2, false),
     newPlayer('AI·左', 3, false),
   ];
-  for (let i = 0; i < PLAYER_COUNT; i++) players[i].street = useCarry[i];
+  for (let i = 0; i < PLAYER_COUNT; i++) players[i].street = carry[i];
   wall = deck.slice();
   dealerSeat = Number.isInteger(opts.dealer) ? ((opts.dealer % PLAYER_COUNT) + PLAYER_COUNT) % PLAYER_COUNT : 0;
   // 发牌
@@ -2401,7 +2421,7 @@ function afterStateChange(){
 }
 
 function playerDraw(seat){
-  if (wall.length === 0){ gameDraw(); return; }
+  if (wall.length === 0){ wallStreetDiscard(seat); return; }
   const tile = wall.pop();
   players[seat].hand.push(tile);
   if (seat === 0) drawnTileId = tile.id;
@@ -2422,6 +2442,27 @@ function playerDraw(seat){
   }
   phase = 'discarding';
   afterStateChange();
+}
+
+// 牌堆为空：不再直接流局，改为从街牌区顶摸一张并「直接打入牌河」。
+// 优先摸其他玩家（按顺位），其他人都空了才摸自己；牌堆和四家街牌区都空才流局。
+function wallStreetDiscard(seat){
+  if (wall.length > 0){ playerDraw(seat); return; }
+  let src = null;
+  for (let i = 1; i < PLAYER_COUNT; i++){
+    const s = (seat + i) % PLAYER_COUNT;
+    if (s !== seat && players[s].street.length > 0){ src = s; break; }
+  }
+  if (src == null && players[seat].street.length > 0) src = seat;
+  if (src == null){ gameDraw(); return; }
+  const p = players[seat];
+  const tile = players[src].street.pop();
+  p.discards.push(tile);
+  pendingDiscard = tile;
+  if (seat === 0){ drawnTileId = null; selectedTileId = null; }
+  log(p.name + ' 牌堆已空，从' + (src === seat ? '自己的' : players[src].name + ' 的') + '街牌区摸 ' + tileText(tile) + ' 直接打入牌河', true);
+  render();
+  resolveClaims(seat, tile, false);
 }
 
 function playerDiscard(seat, tileId){
@@ -2467,7 +2508,7 @@ function resolveClaims(discarderSeat, tile, allowDa){
     for (const opt of collectClaimOptions(seat, tile, discarderSeat)){
       entries.push({ seat, opt });
     }
-    if (allowDa && !p.daInPenalty && (p.isHuman || aiWantsDa(p, tile))){
+    if (allowDa && wall.length > 0 && !p.daInPenalty && (p.isHuman || aiWantsDa(p, tile))){
       const offset = ((seat - discarderSeat + PLAYER_COUNT) % PLAYER_COUNT);
       entries.push({ seat, opt: { type:'da', offset, rank: claimRank('da', false, offset) } });
     }
@@ -2507,7 +2548,7 @@ function resolveClaims(discarderSeat, tile, allowDa){
     }
     // 该玩家的全部选项（含搭，若其可搭）
     const opts = collectClaimOptions(best.seat, tile, discarderSeat);
-    if (allowDa){
+    if (allowDa && wall.length > 0){
       const offset = ((best.seat - discarderSeat + PLAYER_COUNT) % PLAYER_COUNT);
       if (players[best.seat].isHuman || aiWantsDa(players[best.seat], tile)){
         opts.push({ type:'da', offset, rank: claimRank('da', false, offset) });
@@ -2547,6 +2588,8 @@ function advanceTurn(){
   pendingClaim = null; pendingDiscard = null; daGivePending = false;
   bannedStreetKey = null;
   selectedTileId = null;
+  // 牌堆已空：改为从街牌区摸牌并直接打入牌河（不走摸牌选择）
+  if (wall.length === 0){ wallStreetDiscard(currentSeat); return; }
   // 摸牌优先级：牌堆 → 他人街牌区 → 自己街牌区；人类可在此选择
   // 只有自己街牌区有牌时，也可以选择从自己的街牌区摸牌
   if (currentSeat === 0 && (anyOpponentStreet() || players[0].street.length > 0)){
@@ -2743,7 +2786,20 @@ function kongDraw(seat, fromStreet){
     kongDrawFromStreet(seat, src, fromStreet);
     return;
   }
-  if (wall.length === 0){ gameDraw(); return; }
+  if (wall.length === 0){
+    // 牌堆空了：杠后补牌改为从街牌区拿（优先别家，别人都空才拿自己）
+    if (anyStreetTiles()){
+      let src = null;
+      for (let i = 1; i < PLAYER_COUNT; i++){
+        const s = (seat + i) % PLAYER_COUNT;
+        if (s !== seat && players[s].street.length > 0){ src = s; break; }
+      }
+      if (src == null && players[seat].street.length > 0) src = seat;
+      if (src != null){ kongDrawFromStreet(seat, src, true); return; }
+    }
+    gameDraw();
+    return;
+  }
   const tile = wall.pop();
   players[seat].hand.push(tile);
   if (seat === 0) drawnTileId = tile.id;
@@ -4291,7 +4347,7 @@ document.getElementById('back-menu').addEventListener('click', backToMenu);
 // 暴露给自动化测试 / 调试（不影响正常游玩）
 window.__game = {
   startGame, humanClickTile, humanClaim, humanClaimOption, humanDraw, streetPickFrom, canWin, canWinStrict, isNormalTile, winningTiles, winningTilesStrict, playerDraw, declareWin, onDeclineRon, applySortToSelf, patternSortTiles, doKakan, doAnkan, kongDraw, collectClaimOptions, repairCandidates, doRepair, meldMajorSuit, render, aiDoTurn, calcJokerBonus, jokerMeldBonus, isJoker, canWinWithJokers,
-  startRound, nextHand, dealerAdvance, handEndsRound, recordHandResult,
+  startRound, nextHand, dealerAdvance, handEndsRound, recordHandResult, wallStreetDiscard,
   getRound(){ return { active: roundActive, no: roundNo, handNo, passed: roundPassed.slice(), wins: roundWins.slice(), draws: roundDraws, ended: roundEnded, summaryOpen: roundSummaryOpen, result: handResult, title: streetTitle(), tenure: dealerTenureHands }; },
   setSortMode(m){ sortMode = m; },
   setCurrentSeat(s){ currentSeat = s; },
