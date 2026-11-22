@@ -989,6 +989,13 @@
 
   #river-center .wall-label { font-size: 12px; color: #cfe7d6; }
   #river-center .wall-count { font-size: 26px; color: var(--gold); font-weight: 800; line-height: 1; }
+  /* 一圈里的「街名」：壹道春一街 / 贰道夏三街 … */
+  #river-center .street-title {
+    font-size: 17px; font-weight: 800; color: #ffe6a7; letter-spacing: 1px;
+    line-height: 1.1; text-shadow: 0 1px 4px rgba(0,0,0,.9), 0 0 10px rgba(0,0,0,.6);
+    white-space: nowrap;
+  }
+  #river-center .street-title.hidden { display: none; }
   #river-center .hint { font-size: 10px; line-height: 1.25; color: #bfe3cd; text-align: center; max-width: 112px; overflow-wrap: anywhere; }
   #river-center .round-badge { font-size: 12px; color: #ffe6a7; font-weight: 700; }
 
@@ -1193,6 +1200,7 @@
     <div id="river-center">
       <div class="wall-label">牌墙剩余</div>
       <div class="wall-count" id="wall-count-center">0</div>
+      <div class="street-title hidden" id="street-title"></div>
       <div class="round-badge" id="round-badge">公巡 第1巡1手</div>
       <div class="hint" id="hint">准备开始…</div>
     </div>
@@ -1906,6 +1914,7 @@ let handResult = null;        // 本局结果 { type:'win'|'draw', winners:[], d
 let roundEnded = false;       // 本圈是否已结束（四家都下庄）
 let roundSummaryOpen = false; // 是否显示一圈总结
 let dealerContinued = false;  // 本局是否为连庄
+let dealerTenureHands = 1;    // 当前庄家在本圈内第几次坐庄（含连庄）
 let bannedStreetKey = null; // 本回合禁止置入街牌区的牌 key（防循环）
 let claimGen = 0;          // 鸣牌窗口代数，用于作废旧的 10 秒计时器
 let claimRemaining = 10;   // 鸣牌窗口倒计时秒数
@@ -2090,6 +2099,26 @@ function recordHandResult(type, winners){
 function captureStreets(){
   return players.map(p => p.street.slice());
 }
+// 街名：壹道春一街 / 贰道夏三街 …
+const CN_FINANCIAL = ['零','壹','贰','叁','肆','伍','陆','柒','捌','玖','拾'];
+const CN_PLAIN = ['零','一','二','三','四','五','六','七','八','九','十'];
+function cnNumber(n, financial){
+  const base = financial ? CN_FINANCIAL : CN_PLAIN;
+  n = Math.max(0, Math.floor(n || 0));
+  if (n <= 10) return base[n];
+  if (n < 20) return '十' + base[n % 10];
+  if (n < 100){
+    const tens = Math.floor(n / 10), ones = n % 10;
+    return base[tens] + '十' + (ones ? base[ones] : '');
+  }
+  return String(n);
+}
+const SEASONS = ['春', '夏', '秋', '冬'];
+function streetTitle(){
+  if (!roundActive) return '';
+  const season = SEASONS[Math.min(SEASONS.length - 1, roundPassed.filter(Boolean).length)];
+  return cnNumber(roundNo, true) + '道' + season + cnNumber(dealerTenureHands, false) + '街';
+}
 function handEndsRound(){
   if (!roundActive || !handResult || roundEnded) return false;
   return dealerAdvance(handResult, roundPassed, dealerSeat).ended;
@@ -2097,6 +2126,7 @@ function handEndsRound(){
 function startHand(dealer, streets, note){
   handNo++;
   dealerContinued = (note === '连庄');
+  dealerTenureHands = dealerContinued ? dealerTenureHands + 1 : 1;
   startGame({ dealer, streets });
   log('第' + roundNo + '圈 · 第' + handNo + '局' + (note ? '（' + note + '）' : '') + '：' + players[dealer].name + ' 坐庄');
 }
@@ -3560,11 +3590,21 @@ function render(){
       ? ('第' + roundNo + '圈 · 第' + handNo + '局' + (dealerContinued ? ' · 连庄' : ''))
       : '—';
   }
+  const streetTitleEl = document.getElementById('street-title');
+  if (streetTitleEl){
+    if (roundActive){
+      streetTitleEl.textContent = streetTitle();
+      streetTitleEl.classList.remove('hidden');
+    } else {
+      streetTitleEl.textContent = '';
+      streetTitleEl.classList.add('hidden');
+    }
+  }
 
   // 提示
   let hint = '';
   if (phase === 'over'){
-    hint = '本局结束，点击「重新开始」再来一局';
+    hint = '本局结束，点击下方按钮继续';
   } else if (streetPick){
     hint = '选择从哪个街牌区拿顶牌';
   } else if (drawChoice){
@@ -4236,7 +4276,7 @@ document.getElementById('back-menu').addEventListener('click', backToMenu);
 window.__game = {
   startGame, humanClickTile, humanClaim, humanClaimOption, humanDraw, streetPickFrom, canWin, canWinStrict, isNormalTile, winningTiles, winningTilesStrict, playerDraw, declareWin, onDeclineRon, applySortToSelf, patternSortTiles, doKakan, doAnkan, kongDraw, collectClaimOptions, repairCandidates, doRepair, meldMajorSuit, render, aiDoTurn, calcJokerBonus, jokerMeldBonus, isJoker, canWinWithJokers,
   startRound, nextHand, dealerAdvance, handEndsRound, recordHandResult,
-  getRound(){ return { active: roundActive, no: roundNo, handNo, passed: roundPassed.slice(), wins: roundWins.slice(), draws: roundDraws, ended: roundEnded, summaryOpen: roundSummaryOpen, result: handResult }; },
+  getRound(){ return { active: roundActive, no: roundNo, handNo, passed: roundPassed.slice(), wins: roundWins.slice(), draws: roundDraws, ended: roundEnded, summaryOpen: roundSummaryOpen, result: handResult, title: streetTitle(), tenure: dealerTenureHands }; },
   setSortMode(m){ sortMode = m; },
   setCurrentSeat(s){ currentSeat = s; },
   setPhase(v){ phase = v; },
