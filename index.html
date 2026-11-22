@@ -887,6 +887,21 @@
     border: none; background: transparent; color: #cfe7d6; font-size: 20px; cursor: pointer; line-height: 1;
   }
   #win-panel .win-close:hover { color: #fff; }
+  /* 局间/圈末按钮与一圈总结 */
+  #win-panel .win-next {
+    margin-top: 4px; padding: 10px 30px; font-size: 18px; font-weight: 800;
+    border-radius: 10px; border: 1px solid #ffd166; background: #b8860b; color: #fff;
+    cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.4);
+  }
+  #win-panel .win-next:hover { filter: brightness(1.12); }
+  .round-summary { display: flex; flex-direction: column; gap: 6px; min-width: 320px; }
+  .round-row {
+    display: flex; justify-content: space-between; gap: 24px;
+    font-size: 18px; color: #ffe6a7; padding: 6px 12px;
+    background: rgba(255,255,255,.06); border-radius: 8px;
+  }
+  .round-row .round-name { font-weight: 700; }
+  .round-row .round-wins { color: #7fd4a4; font-weight: 700; }
   #win-hand { display: flex; align-items: flex-end; gap: 2px; flex-wrap: wrap; justify-content: center; }
   #win-hand .tile { width: 54px; height: 86px; }
   #win-hand .tile .rk { font-size: 24px; }
@@ -1148,7 +1163,7 @@
       <span class="info">庄家 <b id="dealer-name">—</b></span>
       <span class="info">当前 <b id="turn-name">—</b></span>
       <span class="info">余牌 <b id="wall-count-top">0</b></span>
-    </div>
+      <span class="info">圈 <b id="round-info">—</b></span>    </div>
     <div id="dora-panel" class="side-panel panelled">
       <div class="panel-title">宝牌区</div>
       <div class="panel-note">功能未实装，先设置栏位窗口</div>
@@ -1880,6 +1895,17 @@ let streetPick = false;     // 人类正在选择从哪个街牌区拿牌（规�
 let kongPickPending = false; // street-select 窗口用于杠后补牌选择
 let kongPickSub = false;     // 杠后补牌的同色标记
 let winInfo = null;          // 和牌弹窗信息 { seat, winTile, isTsumo, discarderSeat, score, hand, melds }
+// ---- 一圈（庄家轮转）状态 ----
+let roundActive = false;      // 是否处于「一圈」流程（单人游戏）
+let roundNo = 0;              // 第几圈
+let handNo = 0;               // 本圈第几局
+let roundPassed = [false,false,false,false]; // 本圈已下庄的座位
+let roundWins = [0,0,0,0];    // 本圈各家和牌次数
+let roundDraws = 0;           // 本圈流局次数
+let handResult = null;        // 本局结果 { type:'win'|'draw', winners:[], dealer }
+let roundEnded = false;       // 本圈是否已结束（四家都下庄）
+let roundSummaryOpen = false; // 是否显示一圈总结
+let dealerContinued = false;  // 本局是否为连庄
 let bannedStreetKey = null; // 本回合禁止置入街牌区的牌 key（防循环）
 let claimGen = 0;          // 鸣牌窗口代数，用于作废旧的 10 秒计时器
 let claimRemaining = 10;   // 鸣牌窗口倒计时秒数
@@ -1973,17 +1999,46 @@ function onDeclineRon(seat, tile){
   }
 }
 
-function startGame(){
-  const deck = shuffle(makeDeck());
+// 从整副牌里去掉「街牌区」里已经存在的牌（一圈内街牌不洗回牌堆）
+function buildDeckWithoutStreet(streets){
+  const deck = makeDeck();
+  const all = [];
+  for (const st of streets || []) for (const c of st || []) all.push(c);
+  for (const c of all){
+    // 优先按「同一副牌」匹配，保证 J/Q/K 的牌面版本也一致
+    let idx = deck.findIndex(d => d.suit === c.suit && d.rank === c.rank && (c.copy == null || d.copy === c.copy));
+    if (idx < 0) idx = deck.findIndex(d => d.suit === c.suit && d.rank === c.rank);
+    if (idx >= 0) deck.splice(idx, 1);
+  }
+  return deck;
+}
+
+// opts: { dealer, streets } —— 不传时保持旧行为（庄家 0、街牌区为空），方便测试
+function startGame(opts){
+  opts = opts || {};
+  const carry = (opts.streets || [[],[],[],[]]).map(st => (st || []).slice());
+  const need = START_TILES * PLAYER_COUNT + 1;
+  let deck = buildDeckWithoutStreet(carry);
+  let useCarry = carry;
+  if (deck.length < need){
+    // 街牌区攒得太多、牌堆发不出牌：保底整副重开，街牌洗回
+    log('街牌区里的牌太多，牌堆不够发牌，本局改为整副重开（街牌暂时洗回）。', true);
+    deck = makeDeck();
+    useCarry = [[],[],[],[]];
+  }
+  shuffle(deck);
   winInfo = null;
+  handResult = null;
+  roundSummaryOpen = false;
   players = [
     newPlayer('你', 0, true),
     newPlayer('AI·右', 1, false),
     newPlayer('AI·上', 2, false),
     newPlayer('AI·左', 3, false),
   ];
+  for (let i = 0; i < PLAYER_COUNT; i++) players[i].street = useCarry[i];
   wall = deck.slice();
-  dealerSeat = 0;
+  dealerSeat = Number.isInteger(opts.dealer) ? ((opts.dealer % PLAYER_COUNT) + PLAYER_COUNT) % PLAYER_COUNT : 0;
   // 发牌
   for (let i = 0; i < START_TILES; i++){
     for (let s = 0; s < PLAYER_COUNT; s++){
@@ -2003,8 +2058,79 @@ function startGame(){
   sortHands();
   applySortToSelf();
   render();
-  log('新的一局开始，' + players[dealerSeat].name + ' 为庄家。');
+  if (!roundActive) log('新的一局开始，' + players[dealerSeat].name + ' 为庄家。');
   afterStateChange();
+}
+
+// ---------------- 一圈 / 庄家轮转 ----------------
+// 本局结束时的庄家处理：庄家单独和牌 → 连庄；流局或别家（含多家）和牌 → 下庄给下家
+function dealerAdvance(result, passed, dealer){
+  const nextPassed = passed.slice();
+  const soleDealerWin = !!(result && result.type === 'win' && result.winners.length === 1 && result.winners[0] === dealer);
+  if (soleDealerWin){
+    return { dealer, passed: nextPassed, ended: false, continued: true };
+  }
+  nextPassed[dealer] = true;
+  return {
+    dealer: (dealer + 1) % PLAYER_COUNT,
+    passed: nextPassed,
+    ended: nextPassed.filter(Boolean).length >= PLAYER_COUNT,
+    continued: false,
+  };
+}
+function recordHandResult(type, winners){
+  if (!handResult) handResult = { type, winners: [], dealer: dealerSeat };
+  if (!Array.isArray(handResult.winners)) handResult.winners = [];
+  if (type === 'win') handResult.type = 'win';
+  if (type === 'draw') roundDraws++;
+  for (const w of winners || []){
+    if (handResult.winners.indexOf(w) < 0){ handResult.winners.push(w); roundWins[w]++; }
+  }
+}
+function captureStreets(){
+  return players.map(p => p.street.slice());
+}
+function handEndsRound(){
+  if (!roundActive || !handResult || roundEnded) return false;
+  return dealerAdvance(handResult, roundPassed, dealerSeat).ended;
+}
+function startHand(dealer, streets, note){
+  handNo++;
+  dealerContinued = (note === '连庄');
+  startGame({ dealer, streets });
+  log('第' + roundNo + '圈 · 第' + handNo + '局' + (note ? '（' + note + '）' : '') + '：' + players[dealer].name + ' 坐庄');
+}
+function startRound(dealer){
+  roundActive = true;
+  roundNo++;
+  handNo = 0;
+  roundPassed = [false, false, false, false];
+  roundWins = [0, 0, 0, 0];
+  roundDraws = 0;
+  roundEnded = false;
+  roundSummaryOpen = false;
+  dealerContinued = false;
+  handResult = null;
+  const d = Number.isInteger(dealer)
+    ? ((dealer % PLAYER_COUNT) + PLAYER_COUNT) % PLAYER_COUNT
+    : Math.floor(Math.random() * PLAYER_COUNT);
+  startHand(d, [[], [], [], []], '新一圈开始');
+}
+function nextHand(){
+  if (phase !== 'over') return;
+  if (!roundActive){ startGame(); return; }
+  if (roundEnded){ roundSummaryOpen = true; render(); return; }
+  if (!handResult) return;
+  const streets = captureStreets();
+  const res = dealerAdvance(handResult, roundPassed, dealerSeat);
+  roundPassed = res.passed;
+  if (res.ended){
+    roundEnded = true;
+    roundSummaryOpen = true;
+    render();
+    return;
+  }
+  startHand(res.dealer, streets, res.continued ? '连庄' : '下庄');
 }
 
 function sortHands(){
@@ -2718,6 +2844,7 @@ function findQuad(hand){
 // ---------------- 和牌 ----------------
 function declareWin(seat, discarderSeat, isTsumo, winTile){
   phase = 'over';
+  recordHandResult('win', [seat]);
   const p = players[seat];
   p.revealed = true;
   // 王牌加成：结算总分 ×(1 + 百分比)，见 calcJokerBonus
@@ -2759,6 +2886,7 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
 }
 function gameDraw(){
   phase = 'over';
+  recordHandResult('draw', []);
   log('流局：牌墙摸完，无人和牌。');
   render();
 }
@@ -3426,6 +3554,12 @@ function render(){
   document.getElementById('turn-name').textContent = players[currentSeat].name;
   document.getElementById('wall-count-top').textContent = wall.length;
   document.getElementById('wall-count-center').textContent = wall.length;
+  const roundInfoEl = document.getElementById('round-info');
+  if (roundInfoEl){
+    roundInfoEl.textContent = roundActive
+      ? ('第' + roundNo + '圈 · 第' + handNo + '局' + (dealerContinued ? ' · 连庄' : ''))
+      : '—';
+  }
 
   // 提示
   let hint = '';
@@ -3465,68 +3599,124 @@ function winTileCell(t, tileNode){
   if (!tileNode.classList.contains('back') || isJoker(t)) cell.appendChild(tileNameEl(t, 'win-tile-name'));
   return cell;
 }
+function nextHandButtonLabel(){
+  if (!roundActive) return '再来一局';
+  if (roundEnded) return '开新一圈';
+  if (handEndsRound()) return '查看一圈结果';
+  if (handResult && handResult.type === 'win' && handResult.winners.length === 1 && handResult.winners[0] === dealerSeat){
+    return '连庄 · 下一局';
+  }
+  const nd = handResult ? (handResult.dealer + 1) % PLAYER_COUNT : dealerSeat;
+  return '下一局 · ' + (players[nd] ? players[nd].name : '') + ' 坐庄';
+}
+function renderRoundSummary(panel){
+  const title = document.createElement('div');
+  title.className = 'win-title';
+  title.textContent = '🎐 第' + roundNo + '圈结束';
+  panel.appendChild(title);
+  const sub = document.createElement('div');
+  sub.className = 'win-sub';
+  sub.textContent = '四家都坐过庄并下庄，本圈共 ' + handNo + ' 局（流局 ' + roundDraws + ' 次）';
+  panel.appendChild(sub);
+  const list = document.createElement('div');
+  list.className = 'round-summary';
+  for (let i = 0; i < PLAYER_COUNT; i++){
+    const row = document.createElement('div');
+    row.className = 'round-row';
+    const n = document.createElement('span');
+    n.className = 'round-name';
+    n.textContent = players[i].name;
+    const w = document.createElement('span');
+    w.className = 'round-wins';
+    w.textContent = '和牌 ' + roundWins[i] + ' 次';
+    row.appendChild(n); row.appendChild(w);
+    list.appendChild(row);
+  }
+  panel.appendChild(list);
+  const btn = document.createElement('button');
+  btn.className = 'win-next';
+  btn.textContent = '开新一圈';
+  btn.addEventListener('click', () => startRound());
+  panel.appendChild(btn);
+}
 function renderWinModal(){
   const el = document.getElementById('win-modal');
   if (!el) return;
   el.innerHTML = '';
-  if (phase !== 'over' || !winInfo){
+  if (phase !== 'over'){
     el.classList.add('hidden');
     return;
   }
   el.classList.remove('hidden');
-  const info = winInfo;
   const panel = document.createElement('div');
   panel.id = 'win-panel';
-  const close = document.createElement('button');
-  close.className = 'win-close';
-  close.textContent = '✕';
-  close.addEventListener('click', () => el.classList.add('hidden'));
-  panel.appendChild(close);
-  const who = players[info.seat] ? players[info.seat].name : '';
-  const title = document.createElement('div');
-  title.className = 'win-title';
-  title.textContent = '🎉 ' + who + (info.isTsumo ? ' 自摸和牌！' : ' 荣和和牌！');
-  panel.appendChild(title);
-  const sub = document.createElement('div');
-  sub.className = 'win-sub';
-  let subTxt = '';
-  if (info.winTile) subTxt += '和牌张 ' + tileText(info.winTile) + '　';
-  if (!info.isTsumo && info.discarderSeat != null && players[info.discarderSeat]) subTxt += '（' + players[info.discarderSeat].name + ' 放铳）　';
-  subTxt += '得分 +' + info.score;
-  sub.textContent = subTxt;
-  panel.appendChild(sub);
-  // 王牌加分：把每个王牌面子/将牌的加成列出来
-  if (info.jokerPct > 0 && info.jokerParts && info.jokerParts.length){
-    const jb = document.createElement('div');
-    jb.className = 'win-joker-bonus';
-    const names = info.jokerParts.map(p => p.word + ' +' + p.pct + '%').join('　');
-    jb.textContent = '王牌加成 +' + info.jokerPct + '%　（' + names + '）';
-    panel.appendChild(jb);
+  if (roundSummaryOpen){
+    renderRoundSummary(panel);
+    el.appendChild(panel);
+    return;
   }
-  // 手牌：型排列，关键张独立在最右
-  const handRow = document.createElement('div');
-  handRow.id = 'win-hand';
-  for (const t of info.hand){
-    const e = tileEl(t, {});
-    if (info.winTile && t.id === info.winTile.id){
-      e.classList.add('win-key');
-      e.classList.add('just-drawn');
+  if (winInfo){
+    const info = winInfo;
+    const who = players[info.seat] ? players[info.seat].name : '';
+    const title = document.createElement('div');
+    title.className = 'win-title';
+    title.textContent = '🎉 ' + who + (info.isTsumo ? ' 自摸和牌！' : ' 荣和和牌！');
+    panel.appendChild(title);
+    const sub = document.createElement('div');
+    sub.className = 'win-sub';
+    let subTxt = '';
+    if (info.winTile) subTxt += '和牌张 ' + tileText(info.winTile) + '　';
+    if (!info.isTsumo && info.discarderSeat != null && players[info.discarderSeat]) subTxt += '（' + players[info.discarderSeat].name + ' 放铳）　';
+    subTxt += '得分 +' + info.score;
+    sub.textContent = subTxt;
+    panel.appendChild(sub);
+    // 王牌加分：把每个王牌面子/将牌的加成列出来
+    if (info.jokerPct > 0 && info.jokerParts && info.jokerParts.length){
+      const jb = document.createElement('div');
+      jb.className = 'win-joker-bonus';
+      const names = info.jokerParts.map(p => p.word + ' +' + p.pct + '%').join('　');
+      jb.textContent = '王牌加成 +' + info.jokerPct + '%　（' + names + '）';
+      panel.appendChild(jb);
     }
-    handRow.appendChild(winTileCell(t, e));
-  }
-  panel.appendChild(handRow);
-  // 鸣牌区
-  if (info.melds && info.melds.length){
-    const melds = document.createElement('div');
-    melds.className = 'win-melds';
-    for (const m of info.melds){
-      const line = document.createElement('div');
-      line.className = 'win-meld-line';
-      for (const spec of meldTileSpecs(m)) line.appendChild(winTileCell(spec.t, tileEl(spec.t, { back: spec.back })));
-      melds.appendChild(line);
+    // 手牌：型排列，关键张独立在最右
+    const handRow = document.createElement('div');
+    handRow.id = 'win-hand';
+    for (const t of info.hand){
+      const e = tileEl(t, {});
+      if (info.winTile && t.id === info.winTile.id){
+        e.classList.add('win-key');
+        e.classList.add('just-drawn');
+      }
+      handRow.appendChild(winTileCell(t, e));
     }
-    panel.appendChild(melds);
+    panel.appendChild(handRow);
+    // 鸣牌区
+    if (info.melds && info.melds.length){
+      const melds = document.createElement('div');
+      melds.className = 'win-melds';
+      for (const m of info.melds){
+        const line = document.createElement('div');
+        line.className = 'win-meld-line';
+        for (const spec of meldTileSpecs(m)) line.appendChild(winTileCell(spec.t, tileEl(spec.t, { back: spec.back })));
+        melds.appendChild(line);
+      }
+      panel.appendChild(melds);
+    }
+  } else {
+    const title = document.createElement('div');
+    title.className = 'win-title';
+    title.textContent = '🀄 流局';
+    panel.appendChild(title);
+    const sub = document.createElement('div');
+    sub.className = 'win-sub';
+    sub.textContent = '牌墙摸完，无人和牌。';
+    panel.appendChild(sub);
   }
+  const next = document.createElement('button');
+  next.className = 'win-next';
+  next.textContent = nextHandButtonLabel();
+  next.addEventListener('click', () => nextHand());
+  panel.appendChild(next);
   el.appendChild(panel);
 }
 
@@ -3873,7 +4063,8 @@ function log(msg, important){
 // ---------------- 启动 ----------------
 document.getElementById('restart').addEventListener('click', () => {
   document.getElementById('log').innerHTML = '';
-  startGame();
+  // 重新开始 = 重开一圈（庄家重新随机）
+  startRound();
 });
 document.getElementById('rules-btn').addEventListener('click', () => {
   document.getElementById('rules-overlay').classList.remove('hidden');
@@ -4030,7 +4221,7 @@ function enterSingleGame(){
   document.getElementById('game-screen').classList.remove('hidden');
   document.getElementById('log').innerHTML = '';
   fitGameStage();
-  startGame();
+  startRound();
 }
 function backToMenu(){
   document.getElementById('game-screen').classList.add('hidden');
@@ -4044,6 +4235,8 @@ document.getElementById('back-menu').addEventListener('click', backToMenu);
 // 暴露给自动化测试 / 调试（不影响正常游玩）
 window.__game = {
   startGame, humanClickTile, humanClaim, humanClaimOption, humanDraw, streetPickFrom, canWin, canWinStrict, isNormalTile, winningTiles, winningTilesStrict, playerDraw, declareWin, onDeclineRon, applySortToSelf, patternSortTiles, doKakan, doAnkan, kongDraw, collectClaimOptions, repairCandidates, doRepair, meldMajorSuit, render, aiDoTurn, calcJokerBonus, jokerMeldBonus, isJoker, canWinWithJokers,
+  startRound, nextHand, dealerAdvance, handEndsRound, recordHandResult,
+  getRound(){ return { active: roundActive, no: roundNo, handNo, passed: roundPassed.slice(), wins: roundWins.slice(), draws: roundDraws, ended: roundEnded, summaryOpen: roundSummaryOpen, result: handResult }; },
   setSortMode(m){ sortMode = m; },
   setCurrentSeat(s){ currentSeat = s; },
   setPhase(v){ phase = v; },
