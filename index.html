@@ -1296,6 +1296,7 @@
           <li>四家都坐过庄、并且都下过庄后，<b>一圈结束</b>；结算面板里点「开新一圈」，庄家重新随机。</li>
           <li><b>街牌区跨局保留</b>：同一圈内，每局开始时街牌区里的牌不会洗回牌堆，原样留到下一局；只有开新一圈才全部洗回。</li>
           <li><b>街牌区太多时</b>：如果发牌前牌堆不够 53 张，会让每家把街牌区随机一半（四舍五入）洗回牌堆，再发牌。</li>
+          <li><b>「重新开始」</b>：第 1 圈第 1 局会重开整局（圈数仍是第 1 圈、庄家重新随机）；其他局面只重开<b>当前这一局</b>，圈数 / 局数 / 庄家和本局开始时的街牌区都保持不变。</li>
           <li>中央「牌墙剩余」下方显示当前街名：<b>壹道春一街</b>（第 1 圈、第 1 个庄家、第 1 局）→ 连庄 <b>壹道春二街</b> → 下庄后 <b>壹道夏一街</b> → 秋 → 冬；第二圈就是 <b>贰道春一街</b>。</li>
         </ul>
 
@@ -1952,6 +1953,7 @@ let roundEnded = false;       // 本圈是否已结束（四家都下庄）
 let roundSummaryOpen = false; // 是否显示一圈总结
 let dealerContinued = false;  // 本局是否为连庄
 let dealerTenureHands = 1;    // 当前庄家在本圈内第几次坐庄（含连庄）
+let handStartSnapshot = null; // 本局开始时的快照（重新开始本局用）
 let bannedStreetKey = null; // 本回合禁止置入街牌区的牌 key（防循环）
 let claimGen = 0;          // 鸣牌窗口代数，用于作废旧的 10 秒计时器
 let claimRemaining = 10;   // 鸣牌窗口倒计时秒数
@@ -2176,11 +2178,52 @@ function handEndsRound(){
   if (!roundActive || !handResult || roundEnded) return false;
   return dealerAdvance(handResult, roundPassed, dealerSeat).ended;
 }
+function captureHandStart(){
+  handStartSnapshot = {
+    dealer: dealerSeat,
+    handNo,
+    tenure: dealerTenureHands,
+    continued: dealerContinued,
+    passed: roundPassed.slice(),
+    wins: roundWins.slice(),
+    draws: roundDraws,
+    streets: players.map(p => p.street.slice()),
+  };
+}
+// 只重开当前这一局：保持圈数/局数/庄家，街牌区回到本局开始时的状态
+function restartCurrentHand(){
+  if (!roundActive || !handStartSnapshot){ startRound(); return; }
+  const snap = handStartSnapshot;
+  handNo = snap.handNo;
+  dealerTenureHands = snap.tenure;
+  dealerContinued = snap.continued;
+  roundPassed = snap.passed.slice();
+  roundWins = snap.wins.slice();
+  roundDraws = snap.draws;
+  roundEnded = false;
+  roundSummaryOpen = false;
+  handResult = null;
+  startGame({ dealer: snap.dealer, streets: snap.streets.map(s => s.slice()) });
+  captureHandStart();
+  log('第' + roundNo + '圈 · 第' + handNo + '局重新开始：' + players[dealerSeat].name + ' 坐庄', true);
+}
+// 「重新开始」按钮：第 1 圈第 1 局重开整局（圈数仍为 1）；其他局只重开当前局
+function restartAction(){
+  if (!roundActive){ startGame(); return; }
+  if (roundEnded || roundSummaryOpen){ startRound(); return; }
+  if (roundNo === 1 && handNo === 1){
+    roundNo = 0;   // 让 startRound 后仍然是第 1 圈
+    startRound();
+    return;
+  }
+  restartCurrentHand();
+}
 function startHand(dealer, streets, note){
   handNo++;
   dealerContinued = (note === '连庄');
   dealerTenureHands = dealerContinued ? dealerTenureHands + 1 : 1;
   startGame({ dealer, streets });
+  captureHandStart();
   log('第' + roundNo + '圈 · 第' + handNo + '局' + (note ? '（' + note + '）' : '') + '：' + players[dealer].name + ' 坐庄');
 }
 function startRound(dealer){
@@ -4227,8 +4270,7 @@ function log(msg, important){
 // ---------------- 启动 ----------------
 document.getElementById('restart').addEventListener('click', () => {
   document.getElementById('log').innerHTML = '';
-  // 重新开始 = 重开一圈（庄家重新随机）
-  startRound();
+  restartAction();
 });
 document.getElementById('rules-btn').addEventListener('click', () => {
   renderKongDemos();
@@ -4453,7 +4495,7 @@ document.getElementById('back-menu').addEventListener('click', backToMenu);
 // 暴露给自动化测试 / 调试（不影响正常游玩）
 window.__game = {
   startGame, humanClickTile, humanClaim, humanClaimOption, humanDraw, streetPickFrom, canWin, canWinStrict, isNormalTile, winningTiles, winningTilesStrict, playerDraw, declareWin, onDeclineRon, applySortToSelf, patternSortTiles, doKakan, doAnkan, kongDraw, collectClaimOptions, repairCandidates, doRepair, meldMajorSuit, render, aiDoTurn, calcJokerBonus, jokerMeldBonus, isJoker, canWinWithJokers,
-  startRound, nextHand, dealerAdvance, handEndsRound, recordHandResult, wallStreetDiscard, wallStreetSources, wallEndPickFrom, tileEl, meldTileSpecs,
+  startRound, nextHand, dealerAdvance, handEndsRound, recordHandResult, wallStreetDiscard, wallStreetSources, wallEndPickFrom, tileEl, meldTileSpecs, restartAction, restartCurrentHand,
   getRound(){ return { active: roundActive, no: roundNo, handNo, passed: roundPassed.slice(), wins: roundWins.slice(), draws: roundDraws, ended: roundEnded, summaryOpen: roundSummaryOpen, result: handResult, title: streetTitle(), tenure: dealerTenureHands }; },
   setSortMode(m){ sortMode = m; },
   setCurrentSeat(s){ currentSeat = s; },
