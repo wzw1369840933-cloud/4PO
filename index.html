@@ -200,9 +200,14 @@
   /* 菜单按钮：去掉半透明底，文字直接落在栏位纸面上 */
   .panelled .panel-note { font-size: 11px; }
   /* 宝牌区：文字放到水墨上方留白处，不压到深色墨迹、不越出内圈 */
-  #dora-panel { justify-content: flex-start; padding-top: 9%; }
-  #dora-panel .panel-title { font-size: 16px; }
+  #dora-panel { justify-content: flex-start; padding-top: 3%; }
+  #dora-panel .panel-title { font-size: 16px; margin-top: 0; }
   #dora-panel .panel-note { max-width: 62%; text-align: center; line-height: 1.5; }
+  #dora-tiles { width: 100%; margin-top: 2px; display: flex; flex-direction: column; gap: 2px; align-items: center; }
+  .dora-row { display: flex; gap: 2px; justify-content: center; min-height: 42px; }
+  #dora-tiles .tile.small { width: 28px; height: 42px; }
+  #dora-tiles .tile.small .rk { font-size: 13px; }
+  #dora-tiles .tile.small .st { font-size: 11px; }
   .panelled .panel-note { max-width: 72%; text-align: center; line-height: 1.5; }
   #topbar { flex: 0 0 25%; }
   #dora-panel { flex: 0 0 18%; }
@@ -1277,7 +1282,7 @@
       <span class="info">报听 <b id="ready-info">—</b></span>    </div>
     <div id="dora-panel" class="side-panel panelled">
       <div class="panel-title">宝牌区</div>
-      <div class="panel-note">功能未实装，先设置栏位窗口</div>
+      <div id="dora-tiles"></div>
     </div>
     <div id="log-panel">
       <div id="log"></div>
@@ -1464,6 +1469,15 @@
         <div class="kong-case" data-kong-group="joker"></div>
         <p>多个王牌面子/将牌的加成<b>叠加</b>：例如同时有 RYYY 的杠（+125%）与 RY 的将（+25%），结算总分 +150%。</p>
 
+        <h3>宝牌</h3>
+        <ul>
+          <li>每局开始时，从牌堆底抽 <b>5 张</b>洗乱：<b>3 张正面朝上为阳牌</b>、<b>2 张背面朝上为阴牌</b>，阳上阴下放在宝牌区。</li>
+          <li>每次有人杠牌，从牌堆底再添加 <b>1 阳 1 阴</b>；每局最多添加 <b>4 次</b>，宝牌区上限 <b>7 阳 6 阴（13 张）</b>。</li>
+          <li>和牌时翻开所有阴牌。和牌牌型中，每有一张与阳牌<b>同色不同花、同点数</b>的牌，该阳牌 +25%；每有一张与阴牌同色不同花同点数的牌，该阴牌 +50%。每张宝牌独立计算。</li>
+          <li>RY 宝牌相互计算：R 宝牌给手中的 Y 加分，Y 宝牌给手中的 R 加分。</li>
+          <li>用于同色面子 / 同色将牌的<b>同色替代牌不计宝牌加成</b>（如 ♣5♠5♣5 里的 ♠5、♦3♥3 里的 ♦3）。</li>
+        </ul>
+
         <h3>同色复原（每回合限一次）</h3>
         <p>玩家<b>摸牌后</b>，若鸣牌区里有<b>同色替换</b>的面子，且手牌中有能把它补正的同花色牌，鸣牌区上方会出现<b>「复原」按钮</b>。点击后用手中的正常牌换下该面子里的同色牌，该面子恢复为<b>正常面子</b>；<b>被换下的那张同色牌作为本回合打出的牌置入「街牌区」</b>（可被碰 / 吃 / 杠 / 和，不可被搭）。</p>
         <p>如果同时有<b>多个</b>同色面子可以复原，点击按钮后会弹出窗口，由玩家选择复原哪一个（例如 ♥5♥5♦5 与 ♥3♥4♦5 同时可修时，选其一）。每回合只能复原一次。</p>
@@ -1484,7 +1498,7 @@
         </ul>
 
         <h3>计分（当前为占位，后续接入完整牌型分）</h3>
-        <p>自摸 8 分 · 荣和（放铳）4 分，再乘 <b>(1 + 王牌加成%)</b>；多家荣和时每家分别结算。</p>
+        <p>自摸 8 分 · 荣和（放铳）4 分，再乘 <b>(1 + 王牌加成% + 宝牌加成%)</b>；多家荣和时每家分别结算。</p>
 
         <h3>尚未实装（后续版本）</h3>
         <p>万能牌、宝牌、公池、报听、摸牌规则③④、完整牌型计分与直接获胜牌型、多人模式；牌型可能性栏 / 状态栏 / 聊天栏目前仍是占位。</p>
@@ -2081,6 +2095,9 @@ let swapRemaining = 30;
 let swapIntervalId = null;
 let swapAiTimers = [];
 let inspectResult = null; // 查验结果（确实听牌 / 诈听）
+// 宝牌区（每局重置；阳牌在上、阴牌在下）
+let doraEnabled = true;
+let doraState = { tiles: [], additions: 0, revealed: false };
 let bannedStreetKey = null; // 本回合禁止置入街牌区的牌 key（防循环）
 let claimGen = 0;          // 鸣牌窗口代数，用于作废旧的 10 秒计时器
 let claimRemaining = 10;   // 鸣牌窗口倒计时秒数
@@ -2239,6 +2256,7 @@ function startGame(opts){
       players[s].hand.push(wall.pop());
     }
   }
+  initDora();
   const doSwap = !!opts.swap;
   currentSeat = dealerSeat;
   phase = 'discarding';
@@ -2263,6 +2281,128 @@ function startGame(opts){
   render();
   if (!roundActive) log('新的一局开始，' + players[dealerSeat].name + ' 为庄家。');
   afterStateChange();
+}
+
+// ---------------- 宝牌 ----------------
+function initDora(){
+  doraState = { tiles: [], additions: 0, revealed: false };
+  if (!doraEnabled) { renderDora(); return; }
+  const drawn = [];
+  for (let i = 0; i < 5 && wall.length > 0; i++) drawn.push(wall.shift()); // 牌堆底
+  shuffle(drawn);
+  const yangCount = Math.min(3, drawn.length);
+  for (let i = 0; i < drawn.length; i++){
+    const yang = i < yangCount;
+    doraState.tiles.push({ tile: drawn[i], yang, faceUp: yang });
+  }
+  renderDora();
+  if (drawn.length){
+    log('宝牌区：亮出 ' + yangCount + ' 张阳牌、' + (drawn.length - yangCount) + ' 张阴牌。');
+  }
+}
+function addKongDora(){
+  if (!doraEnabled || !doraState) return;
+  if (doraState.additions >= 4) return;
+  const yangCount = doraState.tiles.filter(d => d.yang).length;
+  const yinCount = doraState.tiles.length - yangCount;
+  if (yangCount >= 7 || yinCount >= 6) return;
+  const pair = [];
+  for (let i = 0; i < 2 && wall.length > 0; i++) pair.push(wall.shift()); // 牌堆底
+  if (pair.length < 2) return;
+  shuffle(pair);
+  doraState.tiles.push({ tile: pair[0], yang: true, faceUp: true });
+  doraState.tiles.push({ tile: pair[1], yang: false, faceUp: false });
+  doraState.additions++;
+  log('宝牌区：第 ' + doraState.additions + ' 次杠宝牌，新增 1 阳 1 阴。', true);
+  renderDora();
+}
+function revealDoraYin(){
+  if (!doraState) return;
+  let changed = false;
+  for (const d of doraState.tiles){
+    if (!d.yang && !d.faceUp){ d.faceUp = true; changed = true; }
+  }
+  doraState.revealed = true;
+  if (changed) renderDora();
+}
+function renderDora(){
+  const el = document.getElementById('dora-tiles');
+  if (!el) return;
+  el.innerHTML = '';
+  const rows = [
+    doraState.tiles.filter(d => d.yang),
+    doraState.tiles.filter(d => !d.yang),
+  ];
+  for (const row of rows){
+    const r = document.createElement('div');
+    r.className = 'dora-row';
+    for (const d of row) r.appendChild(tileEl(d.tile, { small:true, back: !d.faceUp }));
+    el.appendChild(r);
+  }
+}
+// 计算和牌手牌的宝牌加成（不含同色替代牌；RY 宝牌互相匹配）
+function calcDoraPct(hand, melds){
+  if (!doraEnabled || !doraState || !doraState.tiles.length) return { pct:0, parts:[], excluded:[] };
+  const excluded = new Set();
+  for (const m of (melds || [])){
+    if (!m.sub) continue;
+    const cnt = {};
+    for (const t of m.tiles){ if (!isJoker(t)) cnt[t.suit] = (cnt[t.suit] || 0) + 1; }
+    const suits = Object.keys(cnt);
+    if (!suits.length) continue;
+    let maxSuit = suits[0];
+    for (const s of suits) if (cnt[s] > cnt[maxSuit]) maxSuit = s;
+    for (const t of m.tiles){ if (!isJoker(t) && t.suit !== maxSuit) excluded.add(t.id); }
+  }
+  // 手牌中的同色将牌：可能作为将牌的两张都排除（正常同花色本来也吃不到同色宝牌）
+  const target = 4 - (melds || []).length;
+  if (target >= 0){
+    // 若某点数存在「同花色对子」并且能完成和牌，则以正常对子为准，不再按同色将排除
+    const naturalPairRanks = new Set();
+    for (let i = 0; i < hand.length; i++){
+      for (let j = i + 1; j < hand.length; j++){
+        const a = hand[i], b = hand[j];
+        if (a.rank !== b.rank || a.suit !== b.suit) continue;
+        if (isJoker(a)) continue;
+        const rest = hand.filter((t, k) => k !== i && k !== j);
+        if (canMeldColor(buildColorCounts(rest), target, false)) naturalPairRanks.add(a.rank);
+      }
+    }
+    for (let i = 0; i < hand.length; i++){
+      for (let j = i + 1; j < hand.length; j++){
+        const a = hand[i], b = hand[j];
+        if (a.rank !== b.rank || a.suit === b.suit) continue;
+        if (naturalPairRanks.has(a.rank)) continue;
+        if (suitColor(a.suit) !== suitColor(b.suit)) continue;
+        if (isJoker(a) || isJoker(b)) continue;
+        const rest = hand.filter((t, k) => k !== i && k !== j);
+        if (canMeldColor(buildColorCounts(rest), target, false)){
+          excluded.add(a.id); excluded.add(b.id);
+        }
+      }
+    }
+  }
+  let pct = 0;
+  const parts = [];
+  const allTiles = hand.concat(...(melds || []).map(m => m.tiles || []));
+  for (const d of doraState.tiles){
+    if (!d.faceUp) continue;
+    const amount = d.yang ? 25 : 50;
+    let count = 0;
+    for (const t of allTiles){
+      if (excluded.has(t.id)) continue;
+      if (isJoker(d.tile)){
+        if (isJoker(t) && t.suit !== d.tile.suit) count++;
+      } else if (!isJoker(t) && t.rank === d.tile.rank && t.suit !== d.tile.suit && suitColor(t.suit) === suitColor(d.tile.suit)){
+        count++;
+      }
+    }
+    if (count){
+      pct += count * amount;
+      parts.push({ tile: d.tile, yang: d.yang, count, pct: count * amount });
+    }
+  }
+  return { pct, parts, excluded: [...excluded] };
 }
 
 // ---------------- 开局换牌（调） ----------------
@@ -3179,6 +3319,7 @@ function doKakan(seat){
 // 杠后补牌：fromStreet=true（同色杠）时从街牌区顶摸（可选自己街牌区，算自摸）；
 // 所有人街牌区都没牌时才从牌堆摸
 function kongDraw(seat, fromStreet){
+  addKongDora();
   if (fromStreet && anyStreetTiles()){
     if (seat === 0){
       // 人类：弹出街牌区选择窗口（含自己街牌区）
@@ -3364,13 +3505,19 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
   recordHandResult('win', [seat]);
   const p = players[seat];
   p.revealed = true;
-  // 王牌加成：结算总分 ×(1 + 百分比)，见 calcJokerBonus
-  const jokerBonus = calcJokerBonus(p.hand, p.melds);
+  revealDoraYin();
+  const winHand = p.hand.slice();
+  if (winTile && !winHand.some(t => t.id === winTile.id)) winHand.push(winTile);
+  // 宝牌 + 王牌加成：结算总分 ×(1 + 总百分比)
+  const jokerBonus = calcJokerBonus(winHand, p.melds);
+  const doraBonus = calcDoraPct(winHand, p.melds);
+  const totalPct = jokerBonus.pct + doraBonus.pct;
   const baseScore = isTsumo ? 8 : 4;
-  const score = Math.round(baseScore * (1 + jokerBonus.pct / 100));
+  const score = Math.round(baseScore * (1 + totalPct / 100));
   const winName = isTsumo ? '自摸' : (discarderSeat!=null ? ('荣和（'+players[discarderSeat].name+' 放铳）') : '荣和');
   const tileTxt = winTile ? ('和牌张 ' + tileText(winTile) + '，') : '';
-  const bonusTxt = jokerBonus.pct > 0 ? ('王牌加成 +' + jokerBonus.pct + '%，') : '';
+  const bonusTxt = (jokerBonus.pct > 0 ? ('王牌加成 +' + jokerBonus.pct + '%，') : '')
+                 + (doraBonus.pct > 0 ? ('宝牌加成 +' + doraBonus.pct + '%，') : '');
   log('🎉 ' + p.name + ' ' + winName + ' 和牌！' + tileTxt + bonusTxt + '得分 +' + score, true);
   if (isTsumo){
     for (let i=0;i<PLAYER_COUNT;i++) if (i!==seat) log(players[i].name + ' 支付 ' + score + ' 分给 ' + p.name + '（MVP 简化计分）');
@@ -3396,6 +3543,8 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
     baseScore,
     jokerPct: jokerBonus.pct,
     jokerParts: (jokerBonus.parts || []).slice(),
+    doraPct: doraBonus.pct,
+    doraParts: (doraBonus.parts || []).slice(),
     hand: p.hand.slice(),
     melds: p.melds.map(m => ({ type: m.type, sub: !!m.sub, how: m.how || 'minkan', tiles: m.tiles.slice() })),
   };
@@ -4312,6 +4461,13 @@ function renderWinModal(){
       jb.textContent = '王牌加成 +' + info.jokerPct + '%　（' + names + '）';
       panel.appendChild(jb);
     }
+    if (info.doraPct > 0 && info.doraParts && info.doraParts.length){
+      const db = document.createElement('div');
+      db.className = 'win-joker-bonus';
+      const names = info.doraParts.map(p => tileText(p.tile) + (p.yang ? '阳' : '阴') + '×' + p.count + ' +' + p.pct + '%').join('　');
+      db.textContent = '宝牌加成 +' + info.doraPct + '%　（' + names + '）';
+      panel.appendChild(db);
+    }
     // 手牌：型排列，关键张独立在最右
     const handRow = document.createElement('div');
     handRow.id = 'win-hand';
@@ -4979,6 +5135,10 @@ window.__game = {
   getInspect(){ return inspectResult ? { ...inspectResult } : null; },
   getSwap(){ return { active: swapActive, humanDone: swapHumanDone, remaining: swapRemaining, selected: [...swapSelected], done: swapDone.slice() }; },
   setSwapEnabled(v){ swapEnabled = !!v; },
+  setDoraEnabled(v){ doraEnabled = !!v; },
+  setDora(list){ doraEnabled = true; doraState = { tiles: (list || []).map(x => ({ tile: x.tile, yang: !!x.yang, faceUp: x.faceUp !== undefined ? !!x.faceUp : !!x.yang })), additions: 0, revealed: false }; },
+  getDora(){ return { enabled: doraEnabled, tiles: doraState.tiles.map(d => ({ tile: d.tile, yang: d.yang, faceUp: d.faceUp })), additions: doraState.additions, revealed: doraState.revealed }; },
+  calcDoraPct, initDora, addKongDora, revealDoraYin, renderDora,
   getRound(){ return { active: roundActive, no: roundNo, handNo, passed: roundPassed.slice(), wins: roundWins.slice(), draws: roundDraws, ended: roundEnded, summaryOpen: roundSummaryOpen, result: handResult, title: streetTitle(), tenure: dealerTenureHands }; },
   setSortMode(m){ sortMode = m; },
   setCurrentSeat(s){ currentSeat = s; },
