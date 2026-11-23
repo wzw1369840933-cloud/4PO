@@ -539,11 +539,11 @@
     top: 50%;
     transform: translateY(-50%);
   }
-  /* ===== 副牌河：主牌河满了以后往这里放（8 张/行 × 4 行 = 32）===== */
+  /* ===== 副牌河：主牌河满了以后往这里放，牌尺寸与主牌河一致 ===== */
   .river-zone.river-sub { gap: 2px; overflow: hidden; align-content: flex-start; justify-content: flex-start; }
-  .river-zone.river-sub .tile.small { width: 36px; height: 54px; flex: 0 0 auto; }   /* 与主牌河同尺寸 */
-  .river-zone.river-sub .tile.small .rk { font-size: 14px; }
-  .river-zone.river-sub .tile.small .st { font-size: 12px; }
+  .river-zone.river-sub .tile.small { width: 41px; height: 60px; flex: 0 0 auto; }
+  .river-zone.river-sub .tile.small .rk { font-size: 16px; }
+  .river-zone.river-sub .tile.small .st { font-size: 13px; }
   /* 副牌河紧贴各自的主牌河，摆牌方向与主牌河一致 */
   /* 上家：贴主牌河左侧（他自己右手边），横排，方向同主河 */
   #river-sub-2 {
@@ -557,13 +557,13 @@
     left: calc(50% + 152px); top: calc(50% + 154px);
     flex-direction: row; flex-wrap: wrap;
   }
-  /* 左家：贴主牌河下方（他自己右手边），竖排 4 列 x 8 行，方向同主河 */
+  /* 左家：贴主牌河下方（他自己右手边），竖排，方向同主河 */
   #river-sub-3 {
     width: 222px; height: 226px;
     right: calc(50% + 152px); top: calc(50% + 155px);
     flex-direction: column; flex-wrap: wrap-reverse;
   }
-  /* 右家：贴主牌河上方（他自己右手边），竖排 4 列 x 8 行，方向同主河 */
+  /* 右家：贴主牌河上方（他自己右手边），竖排，方向同主河 */
   #river-sub-1 {
     width: 222px; height: 226px;
     left: calc(50% + 152px); bottom: calc(50% + 153px);
@@ -584,13 +584,11 @@
     box-shadow: 0 0 8px rgba(233,196,106,.85);
   }
   .river-zone .tile.small { width: 41px; height: 60px; }   /* 主牌河：7 张/行 × 4 行 = 28 */
-  /* 左右两家牌河：牌横放（麻将习惯） */
+  /* 左右两家牌河：牌横放（麻将习惯），旋转占位与 41×60 的牌一致 */
   .river-rot {
-    width: 54px; height: 36px;
+    width: 60px; height: 41px;
     display: flex; align-items: center; justify-content: center;
   }
-  /* 左右主牌河的旋转占位要与放大后的主牌河一致（60 × 41） */
-  #river-1 .river-rot, #river-3 .river-rot { width: 60px; height: 41px; }
   .river-rot > .tile.small { transform: rotate(90deg); }
   .river-rot.rot-cw  > .tile.small { transform: rotate(90deg); }   /* 左家：顺时针 90° */
   .river-rot.rot-ccw > .tile.small { transform: rotate(-90deg); }  /* 右家：逆时针 90° */
