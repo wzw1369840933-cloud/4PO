@@ -1231,7 +1231,8 @@
       <span class="info">庄家 <b id="dealer-name">—</b></span>
       <span class="info">当前 <b id="turn-name">—</b></span>
       <span class="info">余牌 <b id="wall-count-top">0</b></span>
-      <span class="info">圈 <b id="round-info">—</b></span>    </div>
+      <span class="info">圈 <b id="round-info">—</b></span>
+      <span class="info">报听 <b id="ready-info">—</b></span>    </div>
     <div id="dora-panel" class="side-panel panelled">
       <div class="panel-title">宝牌区</div>
       <div class="panel-note">功能未实装，先设置栏位窗口</div>
@@ -4075,8 +4076,12 @@ function render(){
       ? ('第' + roundNo + '圈 · 第' + handNo + '局' + (dealerContinued ? ' · 连庄' : ''))
       : '—';
   }
-  const streetTitleEl = document.getElementById('street-title');
-  if (streetTitleEl){
+  const readyInfoEl = document.getElementById('ready-info');
+  if (readyInfoEl){
+    const readyNames = players.filter(p => p.riichi).map(p => p.name);
+    readyInfoEl.textContent = readyNames.length ? readyNames.join('、') : '—';
+  }
+  const streetTitleEl = document.getElementById('street-title');  if (streetTitleEl){
     if (roundActive){
       streetTitleEl.textContent = streetTitle();
       streetTitleEl.classList.remove('hidden');
