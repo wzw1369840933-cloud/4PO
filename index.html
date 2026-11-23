@@ -204,10 +204,10 @@
   #dora-panel .panel-title { font-size: 16px; margin-top: 0; }
   #dora-panel .panel-note { max-width: 62%; text-align: center; line-height: 1.5; }
   #dora-tiles { width: 100%; margin-top: 2px; display: flex; flex-direction: column; gap: 2px; align-items: center; }
-  .dora-row { display: flex; gap: 2px; justify-content: center; min-height: 42px; }
-  #dora-tiles .tile.small { width: 28px; height: 42px; }
-  #dora-tiles .tile.small .rk { font-size: 13px; }
-  #dora-tiles .tile.small .st { font-size: 11px; }
+  .dora-row { display: flex; gap: 2px; justify-content: center; min-height: 54px; }
+  #dora-tiles .tile.small { width: 36px; height: 54px; }
+  #dora-tiles .tile.small .rk { font-size: 16px; }
+  #dora-tiles .tile.small .st { font-size: 13px; }
   .panelled .panel-note { max-width: 72%; text-align: center; line-height: 1.5; }
   #topbar { flex: 0 0 25%; }
   #dora-panel { flex: 0 0 18%; }
@@ -289,9 +289,10 @@
   #res-list .res-opt:hover { background: rgba(111,207,151,.18); }
   #res-list .res-opt.on { background: #1f7a4d; color: #fff; border-color: #6fcf97; }
 
-  /* 牌河 / 鸣牌区：开启后每张牌左上角显示花色点数小字（如 ♥Q） */
+  /* 牌河 / 鸣牌区 / 宝牌区：开启后每张牌左上角显示花色点数小字（如 ♥Q） */
   body.tile-labels .river-zone .tile.face::after,
-  body.tile-labels .meld-row .tile.face::after {
+  body.tile-labels .meld-row .tile.face::after,
+  body.tile-labels #dora-tiles .tile.face::after {
     content: attr(data-tile-name);
     position: absolute;
     left: 1px; top: 0;
@@ -303,9 +304,11 @@
     text-shadow: 0 0 2px rgba(0,0,0,.95), 0 1px 3px rgba(0,0,0,.9), 0 0 1px #000;
   }
   body.tile-labels .river-zone .tile.face.red::after,
-  body.tile-labels .meld-row .tile.face.red::after { color: #ff5a4a; }
+  body.tile-labels .meld-row .tile.face.red::after,
+  body.tile-labels #dora-tiles .tile.face.red::after { color: #ff5a4a; }
   body.tile-labels .river-zone .tile.face.black::after,
-  body.tile-labels .meld-row .tile.face.black::after { color: #FFE9A8; }
+  body.tile-labels .meld-row .tile.face.black::after,
+  body.tile-labels #dora-tiles .tile.face.black::after { color: #FFE9A8; }
   /* 上/左/右鸣牌区的牌是转过的：小字反向转回来，方向与牌河一致；top 同样往里推 */
   body.tile-labels #p-top .meld-row .tile.face::after { transform: rotate(180deg); }
   body.tile-labels #p-left .meld-row .tile.face::after { transform: rotate(-90deg); top: 12px; }
@@ -1199,7 +1202,8 @@
   .tile.joker { box-shadow: 0 0 0 2px rgba(195,115,255,.85) inset, 0 0 10px rgba(195,115,255,.55); }
   .tile.joker .rk { color: #C373FF; font-weight: 900; text-shadow: 0 0 6px rgba(0,0,0,.9); }
   body.tile-labels .river-zone .tile.face.joker::after,
-  body.tile-labels .meld-row .tile.face.joker::after { color: #C373FF; }
+  body.tile-labels .meld-row .tile.face.joker::after,
+  body.tile-labels #dora-tiles .tile.face.joker::after { color: #C373FF; }
   .win-joker-bonus { margin-top: 8px; font-size: 16px; font-weight: 800; color: #C373FF; text-shadow: 0 1px 4px rgba(0,0,0,.9); }
   #log .suit-joker { color: #C373FF; }
   /* ===== 同色复原 ===== */
@@ -1350,7 +1354,7 @@
       <div id="settings-menu" class="hidden">
         <div class="set-title">测试设置</div>
         <button id="ai-test-toggle">AI 只摸打（不鸣牌/不搭）：关</button>
-        <button id="tile-label-toggle">牌河/鸣牌区显示牌面小字：关</button>
+        <button id="tile-label-toggle">牌河/鸣牌区/宝牌区显示牌面小字：关</button>
         <div class="set-title" style="margin-top:4px">显示设置</div>
         <button id="res-toggle">显示分辨率：自动 ▾</button>
         <div id="res-list" class="hidden">
@@ -5072,7 +5076,7 @@ function applyTileLabelMode(){
   document.body.classList.toggle('tile-labels', !!tileLabelMode);
   const b = document.getElementById('tile-label-toggle');
   if (b){
-    b.textContent = '牌河/鸣牌区显示牌面小字：' + (tileLabelMode ? '开' : '关');
+    b.textContent = '牌河/鸣牌区/宝牌区显示牌面小字：' + (tileLabelMode ? '开' : '关');
     if (tileLabelMode) b.classList.add('on'); else b.classList.remove('on');
   }
 }
