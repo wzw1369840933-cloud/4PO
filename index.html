@@ -617,6 +617,7 @@
   .counter-badge.da.penalty { background: #d0302a; color: #fff; animation: blink 1s infinite; }
   .counter-badge.furiten { background: #7a5cc7; color: #fff; }
   .counter-badge.samecolor { background: #3b7a9c; color: #fff; }
+  .counter-badge.ready { background: var(--gold); color: #3a2a00; }
   .p-area.penalty { outline: 2px solid #ff4444; box-shadow: 0 0 12px #ff4444aa; border-radius: 8px; }
   @keyframes blink { 50% { opacity: .5; } }
 
@@ -843,6 +844,17 @@
     color: #FFFFF0; text-shadow: 0 2px 8px rgba(0,0,0,.85);
     font-variant-numeric: tabular-nums;
   }
+  /* 报听按钮：放在牌桌右下角（截图圈出的位置） */
+  #ready-btn {
+    position: absolute; right: 2px; bottom: 2px; width: 112px; height: 112px;
+    padding: 0; border: none; z-index: 74; cursor: pointer;
+    background: url('items/bottom/GAME/听_普通与关闭后.svg') center/contain no-repeat;
+    filter: drop-shadow(0 3px 9px rgba(0,0,0,.55));
+  }
+  #ready-btn:hover { background-image: url('items/bottom/GAME/听_悬停.svg'); }
+  #ready-btn.on { background-image: url('items/bottom/GAME/听_点击与开启后.svg'); }
+  #ready-btn.disabled { filter: grayscale(1) brightness(.55); cursor: not-allowed; }
+  #ready-btn.hidden { display: none; }
   #draw-btns button {
     padding: 9px 18px; font-size: 15px; border-radius: 9px; cursor: pointer;
     border: 1px solid #ccc; background: #2a2a2a; color: #eee; font-weight: 600;
@@ -1264,6 +1276,7 @@
       <button id="swap-btn" title="调：确认换牌（未选牌时点击 = 放弃）"></button>
       <div id="swap-countdown">30</div>
     </div>
+    <button id="ready-btn" class="hidden" title="听：报听 / 弃听（仅你的回合可切换；双击已报听玩家的手牌可查验）"></button>
     <div id="win-modal" class="hidden"></div>
   </div>
   </div>
@@ -1346,7 +1359,7 @@
         <p>4 副扑克牌（♠♥♦♣ × 2~10 / J / Q / K / A，共 208 张）+ 王牌 <b>R 4 张、Y 4 张</b>，合计 <b>216 张</b>。</p>
 
         <h3>和牌条件</h3>
-        <p>4 副面子 + 1 对将牌，共 14 张（每副面子占 3 张，杠占 4 张时按 1 副面子计）。可以荣和或自摸；支持多家同时荣和、抢杠和；牌堆与四家街牌区都摸完仍无人和牌，才算流局。</p>
+        <p>4 副面子 + 1 对将牌，共 14 张（每副面子占 3 张，杠占 4 张时按 1 副面子计）。可以荣和或自摸；支持多家同时荣和、抢杠和；牌堆与四家街牌区都摸完仍无人和牌，才算流局。<b>只有报听的玩家才能和牌</b>；没报听既不会出现和牌提示，也不会进入振听。</p>
 
         <h3>面子（可组合的牌型）</h3>
         <ul>
@@ -1408,6 +1421,14 @@
         <h3>振听 / 同色振听</h3>
         <p>当玩家处于<b>听牌</b>时，若有人放铳、或玩家自己摸上正常和张，但玩家<b>放弃「和牌」并且打出</b>，则会进入<b>振听</b>：一巡内<b>只能自摸和牌</b>。</p>
         <p>如果放弃的和张是<b>同色牌</b>，则进入<b>同色振听</b>：玩家仍可以和正常的和张，但一巡内<b>不能和同色和张</b>，同色和张<b>只能靠自摸和牌</b>。</p>
+
+        <h3>报听 / 诈听 / 查验</h3>
+        <ul>
+          <li><b>报听</b>：摸牌或鸣牌后、出牌前，可在自己回合点「听」按钮报听；<b>只有自己回合能开 / 关</b>，回合外按钮锁定。</li>
+          <li>只有报听的人才能和牌；报听时不校验手牌，所以可能报成<b>诈听</b>。不能听牌时可以在自己回合再点一次「弃听」。</li>
+          <li><b>查验</b>：双击任意已报听玩家的手牌。若确实听牌 → 查验者放铳，支付 <b>40 分</b>（暂按最大总得分 40 分计），本局视为该玩家荣和；若诈听 → 该玩家向其他三家各支付 <b>36 分</b>（共 108 分），视为放铳给三家，本局结束。</li>
+          <li>AI 也会在自己听牌时报听；诈听被查验同样受罚。</li>
+        </ul>
 
         <h3>计分（当前为占位，后续接入完整牌型分）</h3>
         <p>自摸 8 分 · 荣和（放铳）4 分，再乘 <b>(1 + 王牌加成%)</b>；多家荣和时每家分别结算。</p>
@@ -2006,6 +2027,7 @@ let swapDone = [false, false, false, false];
 let swapRemaining = 30;
 let swapIntervalId = null;
 let swapAiTimers = [];
+let inspectResult = null; // 查验结果（确实听牌 / 诈听）
 let bannedStreetKey = null; // 本回合禁止置入街牌区的牌 key（防循环）
 let claimGen = 0;          // 鸣牌窗口代数，用于作废旧的 10 秒计时器
 let claimRemaining = 10;   // 鸣牌窗口倒计时秒数
@@ -2073,6 +2095,7 @@ function ronBlocked(seat, tile){
 function canRonAgainst(seat, tile){
   const p = players[seat];
   if (!p || !tile) return false;
+  if (!p.riichi) return false;   // 不报听不能和牌
   if (ronBlocked(seat, tile)) return false;
   return canWin(p.hand.concat([tile]), p.melds.length, false, true);
 }
@@ -2146,6 +2169,7 @@ function startGame(opts){
   shuffle(deck);
   winInfo = null;
   handResult = null;
+  inspectResult = null;
   roundSummaryOpen = false;
   players = [
     newPlayer('你', 0, true),
@@ -2331,6 +2355,48 @@ function finishSwapPhase(){
     render();
     afterStateChange();
   }
+}
+
+// ---------------- 报听 / 查验 ----------------
+function toggleReady(){
+  if (!(phase === 'discarding' && currentSeat === 0 && !daGivePending && players[0] && players[0].isHuman)) return;
+  const p = players[0];
+  p.riichi = !p.riichi;
+  log(p.name + (p.riichi ? ' 报听。' : ' 弃听。'), true);
+  render();
+}
+// 人类双击已报听玩家的手牌 → 查验；确实听牌则查验者放铳 40 分，诈听则赔其他三家各 36 分
+function inspectReady(target){
+  if (phase !== 'discarding' || swapActive) return;
+  const p = players[target];
+  if (!p || target === 0 || !p.riichi || p.revealed) return;
+  const waits = tenpaiTiles(p.hand, p.melds.length);
+  const genuine = waits.length > 0;
+  p.revealed = true;
+  stopClaimCountdown();
+  pendingClaim = null; pendingDiscard = null; daGivePending = false;
+  drawnTileId = null; selectedTileId = null;
+  phase = 'over';
+  winInfo = null;
+  inspectResult = {
+    target,
+    inspector: 0,
+    genuine,
+    hand: p.hand.slice(),
+    melds: p.melds.map(m => ({ type: m.type, sub: !!m.sub, how: m.how || 'minkan', tiles: m.tiles.slice() })),
+    waits: waits.map(t => tileText(t)),
+    amount: genuine ? 40 : 36,
+    others: [0, 1, 2, 3].filter(s => s !== target),
+  };
+  inspectResult.revealedHand = p.hand.slice();
+  if (genuine){
+    log('查验：' + p.name + ' 确实听牌（听 ' + (waits.length ? waits.map(tileText).join(' ') : '—') + '）。' + players[0].name + ' 放铳，支付 40 分。', true);
+    recordHandResult('win', [target]);
+  } else {
+    log('查验：' + p.name + ' 是诈听！向其他三家各支付 36 分（共 108 分），视为放铳给三家。', true);
+    recordHandResult('win', inspectResult.others);
+  }
+  render();
 }
 
 // ---------------- 一圈 / 庄家轮转 ----------------
@@ -2698,7 +2764,7 @@ function playerDraw(seat){
   sortHands();
   // 自摸检测（自摸允许同色将牌）。注意：自摸不受振听 / 同色振听 / 搭惩罚限制，
   // 这三种状态只禁止「荣和」，所以这里刻意不调 canRonAgainst。
-  if (canWin(players[seat].hand, players[seat].melds.length, false, true)){
+  if (players[seat].riichi && canWin(players[seat].hand, players[seat].melds.length, false, true)){
     if (players[seat].isHuman){
       phase = 'claim'; pendingClaim = { seat, type:'tsumo', winTile: tile };
       render();
@@ -2931,8 +2997,8 @@ function streetDraw(seat, sourceSeat){
   // 拿自己的街牌区 = 自摸，振听/同色振听/搭惩罚都不影响；拿别人的街牌区 = 被放铳，必须过 canRonAgainst
   const fromOwnStreet = sourceSeat === seat;
   // 牌已 push 进手牌：不能再用 canRonAgainst（会重复加牌），只查状态 + 现有手牌牌型
-  const streetWinOk = fromOwnStreet ? canWin(p.hand, p.melds.length, false, true)
-                                   : (!ronBlocked(seat, tile) && canWin(p.hand, p.melds.length, false, true));
+  const streetWinOk = p.riichi && (fromOwnStreet ? canWin(p.hand, p.melds.length, false, true)
+                                   : (!ronBlocked(seat, tile) && canWin(p.hand, p.melds.length, false, true)));
   if (streetWinOk){
     if (p.isHuman){
       phase = 'claim'; pendingClaim = { seat, type:'tsumo', tsumoDiscarder: fromOwnStreet ? null : sourceSeat, winTile: tile };
@@ -3131,8 +3197,8 @@ function kongStreetPickFrom(sourceSeat){
 function kongAfterDraw(seat, sourceSeat, fromOwn, tile){
   // 从自己街牌区补牌 = 自摸；从别人街牌区补牌 = 被放铳，需过振听/同色振听/搭惩罚判定
   // 牌已 push 进手牌：同上，只查状态 + 现有手牌牌型
-  const kongWinOk = fromOwn ? canWin(players[seat].hand, players[seat].melds.length, false, true)
-                            : (!ronBlocked(seat, tile) && canWin(players[seat].hand, players[seat].melds.length, false, true));
+  const kongWinOk = players[seat].riichi && (fromOwn ? canWin(players[seat].hand, players[seat].melds.length, false, true)
+                            : (!ronBlocked(seat, tile) && canWin(players[seat].hand, players[seat].melds.length, false, true)));
   if (kongWinOk){
     if (players[seat].isHuman){
       phase = 'claim';
@@ -3319,9 +3385,26 @@ function aiDoTurn(){
       if (doRepair(currentSeat, fixable[0])) return;   // 复原后这张牌就是本回合打出的牌，回合结束
     }
   }
+  aiUpdateReady(p);
   // 出牌：打最「孤立」的一张（若本回合出牌进街牌区，避开禁牌）
-  const discard = aiChooseDiscard(p.hand, drawFromStreet ? bannedStreetKey : null) || p.hand[p.hand.length - 1];
+  let discard;
+  if (p.riichi){
+    // 报听后必须保持听牌：只在「打出后仍听牌」的牌里挑
+    const keep = p.hand.filter(t => winningTiles(p.hand.filter(x => x.id !== t.id), p.melds.length).length > 0);
+    discard = keep.length
+      ? (aiChooseDiscard(keep, drawFromStreet ? bannedStreetKey : null) || keep[0])
+      : (aiChooseDiscard(p.hand, drawFromStreet ? bannedStreetKey : null) || p.hand[p.hand.length - 1]);
+  } else {
+    discard = aiChooseDiscard(p.hand, drawFromStreet ? bannedStreetKey : null) || p.hand[p.hand.length - 1];
+  }
   playerDiscard(currentSeat, discard.id);
+}
+// AI 报听 / 弃听：只在真正能听牌时报听，不会诈听
+function aiUpdateReady(p){
+  if (aiTestMode || !p || p.isHuman) return;
+  const able = tenpaiTiles(p.hand, p.melds.length).length > 0;
+  if (!p.riichi && able){ p.riichi = true; log(p.name + ' 报听。', true); }
+  else if (p.riichi && !able){ p.riichi = false; log(p.name + ' 弃听。', true); }
 }
 function hasKakan(p){
   for (const m of p.melds){
@@ -3803,6 +3886,12 @@ function playerAreaHTML(seat){
   name.className = 'active-ring' + (currentSeat === seat && phase !== 'over' ? '' : '');
   name.textContent = p.name + (currentSeat === seat && phase !== 'over' ? ' ▶' : '');
   head.appendChild(dot); head.appendChild(name);
+  if (p.riichi){
+    const rb = document.createElement('span');
+    rb.className = 'counter-badge ready';
+    rb.textContent = '听';
+    head.appendChild(rb);
+  }
   // 私巡计数器（右侧）：搭计数所有人可见；振听仅自己可见
   if (p.daPenalty > 0){
     const db = document.createElement('span');
@@ -3861,6 +3950,11 @@ function render(){
       for (let i = 0; i < players[seat].hand.length; i++){
         handRow.appendChild(tileEl({suit:'s',rank:0}, { back:true, big:true }));
       }
+    }
+    if (!isSelf && players[seat].riichi && !players[seat].revealed){
+      handRow.style.cursor = 'pointer';
+      handRow.title = '双击查验（该玩家已报听）';
+      handRow.addEventListener('dblclick', () => inspectReady(seat));
     }
     root.appendChild(handRow);
 
@@ -4031,6 +4125,16 @@ function render(){
     }
   }
 
+  // 报听按钮：只在牌局中显示；只有自己出牌阶段可开关
+  const readyBtn = document.getElementById('ready-btn');
+  if (readyBtn){
+    const inHand = players.length === 4 && phase !== 'over' && phase !== 'swap';
+    if (inHand) readyBtn.classList.remove('hidden'); else readyBtn.classList.add('hidden');
+    if (players[0] && players[0].riichi) readyBtn.classList.add('on'); else readyBtn.classList.remove('on');
+    const canToggle = phase === 'discarding' && currentSeat === 0 && !daGivePending && players[0] && players[0].isHuman;
+    if (canToggle) readyBtn.classList.remove('disabled'); else readyBtn.classList.add('disabled');
+  }
+
   renderActions();
   renderWinModal();
 }
@@ -4102,6 +4206,11 @@ function renderWinModal(){
     el.appendChild(panel);
     return;
   }
+  if (inspectResult){
+    renderInspectResult(panel);
+    el.appendChild(panel);
+    return;
+  }
   if (winInfo){
     const info = winInfo;
     const who = players[info.seat] ? players[info.seat].name : '';
@@ -4165,6 +4274,51 @@ function renderWinModal(){
   next.addEventListener('click', () => nextHand());
   panel.appendChild(next);
   el.appendChild(panel);
+}
+
+function renderInspectResult(panel){
+  const info = inspectResult;
+  const target = players[info.target];
+  const title = document.createElement('div');
+  title.className = 'win-title';
+  title.textContent = info.genuine
+    ? '🔍 查验：' + target.name + ' 确实听牌'
+    : '🔍 查验：' + target.name + ' 诈听！';
+  panel.appendChild(title);
+  const sub = document.createElement('div');
+  sub.className = 'win-sub';
+  sub.textContent = target.name + ' 报听后被 ' + players[0].name + ' 查验。';
+  panel.appendChild(sub);
+  const handRow = document.createElement('div');
+  handRow.id = 'win-hand';
+  for (const t of info.hand) handRow.appendChild(tileEl(t, {}));
+  panel.appendChild(handRow);
+  if (info.melds && info.melds.length){
+    const melds = document.createElement('div');
+    melds.className = 'win-melds';
+    for (const m of info.melds){
+      const line = document.createElement('div');
+      line.className = 'win-meld-line';
+      for (const spec of meldTileSpecs(m)) line.appendChild(winTileCell(spec.t, tileEl(spec.t, { back: spec.back })));
+      melds.appendChild(line);
+    }
+    panel.appendChild(melds);
+  }
+  const pay = document.createElement('div');
+  pay.className = 'win-sub';
+  if (info.genuine){
+    pay.textContent = '听牌：' + (info.waits.join(' ') || '—') + '　→ 本局视为 ' + target.name + ' 荣和，'
+      + players[0].name + ' 放铳，支付 40 分（暂按其最大总得分 40 分计）。';
+  } else {
+    const names = info.others.map(s => players[s].name).join('、');
+    pay.textContent = '诈听：' + target.name + ' 向 ' + names + ' 各支付 36 分（共 108 分），视为放铳给三家。';
+  }
+  panel.appendChild(pay);
+  const next = document.createElement('button');
+  next.className = 'win-next';
+  next.textContent = nextHandButtonLabel();
+  next.addEventListener('click', () => nextHand());
+  panel.appendChild(next);
 }
 
 function showStreetTip(seat, e){
@@ -4517,6 +4671,7 @@ document.getElementById('restart').addEventListener('click', () => {
   restartAction();
 });
 document.getElementById('swap-btn').addEventListener('click', () => confirmSwap());
+document.getElementById('ready-btn').addEventListener('click', () => toggleReady());
 document.getElementById('rules-btn').addEventListener('click', () => {
   renderKongDemos();
   document.getElementById('rules-overlay').classList.remove('hidden');
@@ -4739,9 +4894,11 @@ document.getElementById('back-menu').addEventListener('click', backToMenu);
 
 // 暴露给自动化测试 / 调试（不影响正常游玩）
 window.__game = {
-  startGame, humanClickTile, humanClaim, humanClaimOption, humanDraw, streetPickFrom, canWin, canWinStrict, isNormalTile, winningTiles, winningTilesStrict, playerDraw, declareWin, onDeclineRon, applySortToSelf, patternSortTiles, doKakan, doAnkan, kongDraw, collectClaimOptions, repairCandidates, doRepair, meldMajorSuit, render, aiDoTurn, calcJokerBonus, jokerMeldBonus, isJoker, canWinWithJokers,
+  startGame, humanClickTile, humanClaim, humanClaimOption, humanDraw, streetPickFrom, canWin, canWinStrict, isNormalTile, winningTiles, winningTilesStrict, canRonAgainst, playerDraw, declareWin, onDeclineRon, applySortToSelf, patternSortTiles, doKakan, doAnkan, kongDraw, collectClaimOptions, repairCandidates, doRepair, meldMajorSuit, render, aiDoTurn, calcJokerBonus, jokerMeldBonus, isJoker, canWinWithJokers,
   startRound, nextHand, dealerAdvance, handEndsRound, recordHandResult, wallStreetDiscard, wallStreetSources, wallEndPickFrom, tileEl, meldTileSpecs, restartAction, restartCurrentHand,
   toggleSwapPick, confirmSwap, finishSwapForHuman, aiSwap, finishSwapPhase, tickSwap,
+  toggleReady, inspectReady,
+  getInspect(){ return inspectResult ? { ...inspectResult } : null; },
   getSwap(){ return { active: swapActive, humanDone: swapHumanDone, remaining: swapRemaining, selected: [...swapSelected], done: swapDone.slice() }; },
   setSwapEnabled(v){ swapEnabled = !!v; },
   getRound(){ return { active: roundActive, no: roundNo, handNo, passed: roundPassed.slice(), wins: roundWins.slice(), draws: roundDraws, ended: roundEnded, summaryOpen: roundSummaryOpen, result: handResult, title: streetTitle(), tenure: dealerTenureHands }; },
