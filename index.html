@@ -545,31 +545,30 @@
   .river-zone.river-sub .tile.small .rk { font-size: 16px; }
   .river-zone.river-sub .tile.small .st { font-size: 13px; }
   /* 副牌河紧贴各自的主牌河，摆牌方向与主牌河一致 */
-  /* 上家：贴主牌河左侧（他自己右手边），横排，方向同主河 */
+  /* 上家：贴主牌河左侧（他自己右手边），横排 6 张 × 4 行 */
   #river-sub-2 {
-    width: 226px; height: 222px;
+    width: 256px; height: 246px;
     right: calc(50% + 152px); bottom: calc(50% + 153px);
     flex-direction: row-reverse; flex-wrap: wrap-reverse;
   }
-  /* 你（下家）：贴主牌河右侧（你自己右手边），横排，方向同主河 */
+  /* 你（下家）：贴主牌河右侧（你自己右手边），横排 6 张 × 4 行 */
   #river-sub-0 {
-    width: 226px; height: 222px;
+    width: 256px; height: 246px;
     left: calc(50% + 152px); top: calc(50% + 154px);
     flex-direction: row; flex-wrap: wrap;
   }
-  /* 左家：贴主牌河下方（他自己右手边），竖排，方向同主河 */
+  /* 左家：贴主牌河下方（他自己右手边），竖排 6 张 × 4 行 */
   #river-sub-3 {
-    width: 222px; height: 226px;
+    width: 246px; height: 256px;
     right: calc(50% + 152px); top: calc(50% + 155px);
     flex-direction: column; flex-wrap: wrap-reverse;
   }
-  /* 右家：贴主牌河上方（他自己右手边），竖排，方向同主河 */
+  /* 右家：贴主牌河上方（他自己右手边），竖排 6 张 × 4 行 */
   #river-sub-1 {
-    width: 222px; height: 226px;
+    width: 246px; height: 256px;
     left: calc(50% + 152px); bottom: calc(50% + 153px);
     flex-direction: column-reverse; flex-wrap: wrap;
   }
-  /* 左右两家的副牌河：牌小一号才能塞下 4 x 8 */
   /* 上家打出的牌：朝向他那一面（旋转 180°），小字反向转回来保持正向可读 */
   #river-2 .tile.small,
   #river-sub-2 .tile.small { transform: rotate(180deg); }
@@ -621,6 +620,17 @@
     width: 60px; height: 84px; flex-direction: column-reverse;
   }
   #river-extra-3 .river-slot, #river-extra-1 .river-slot { width: 60px; height: 41px; }
+  /* 第三牌河的牌：尺寸与主牌河一致 */
+  .river-extra .tile { pointer-events: auto; }
+  .river-extra .tile.small { width: 41px; height: 60px; flex: 0 0 auto; }
+  .river-extra .tile.small .rk { font-size: 16px; }
+  .river-extra .tile.small .st { font-size: 13px; }
+  #river-extra-2 .tile.small { transform: rotate(180deg); }
+  #river-extra-2 .tile.small::after { transform: rotate(180deg); }
+  .river-extra .tile.small.river-latest {
+    border: 2px solid var(--gold);
+    box-shadow: 0 0 8px rgba(233,196,106,.85);
+  }
 
   .p-head { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 2px 0; }
   .dealer-dot {
@@ -4074,15 +4084,23 @@ function render(){
   }
 
   // 中间牌河（俯瞰视角，每人一格，往中间聚拢）
-  // 主牌河 28 张（7×4），放满后溢出到副牌河
+  // 主牌河 28 张（7×4）→ 副牌河 24 张（6×4）→ 第三牌河 2 张
   const RIVER_MAIN_CAP = 28;
+  const RIVER_SUB_CAP = 24;
+  const RIVER_THIRD_CAP = 2;
   for (let seat = 0; seat < PLAYER_COUNT; seat++){
     const zone = document.getElementById('river-' + seat);
     const subZone = document.getElementById('river-sub-' + seat);
+    const extraZone = document.getElementById('river-extra-' + seat);
     if (zone) zone.innerHTML = '';
     if (subZone) subZone.innerHTML = '';
+    if (extraZone) extraZone.innerHTML = '';
+    let latestEl = null;
     players[seat].discards.forEach((t, idx) => {
-      const target = idx < RIVER_MAIN_CAP ? zone : subZone;
+      let target = null;
+      if (idx < RIVER_MAIN_CAP) target = zone;
+      else if (idx < RIVER_MAIN_CAP + RIVER_SUB_CAP) target = subZone;
+      else if (idx < RIVER_MAIN_CAP + RIVER_SUB_CAP + RIVER_THIRD_CAP) target = extraZone;
       if (!target) return;
       const el = tileEl(t, { small:true });
       if (seat === 1 || seat === 3){
@@ -4094,12 +4112,19 @@ function render(){
       } else {
         target.appendChild(el);
       }
+      if (idx === players[seat].discards.length - 1) latestEl = el;
     });
+    // 第三牌河：不足两张时补空位
+    if (extraZone){
+      const extraCount = Math.max(0, Math.min(RIVER_THIRD_CAP, players[seat].discards.length - RIVER_MAIN_CAP - RIVER_SUB_CAP));
+      for (let k = extraCount; k < RIVER_THIRD_CAP; k++){
+        const slot = document.createElement('div');
+        slot.className = 'river-slot';
+        extraZone.appendChild(slot);
+      }
+    }
     // 最新打出的一张高亮
-    const lastZone = players[seat].discards.length > RIVER_MAIN_CAP ? subZone : zone;
-    const lastNode = lastZone ? lastZone.lastElementChild : null;
-    const latest = lastNode && lastNode.classList && lastNode.classList.contains('river-rot') ? lastNode.children[0] : lastNode;
-    if (latest && latest.classList) latest.classList.add('river-latest');
+    if (latestEl && latestEl.classList) latestEl.classList.add('river-latest');
   }
 
   // 顶部信息
