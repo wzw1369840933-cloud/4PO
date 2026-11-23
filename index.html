@@ -846,14 +846,20 @@
   }
   /* 报听按钮：放在牌桌右下角（截图圈出的位置） */
   #ready-btn {
-    position: absolute; right: 2px; bottom: 2px; width: 112px; height: 112px;
-    padding: 0; border: none; z-index: 74; cursor: pointer;
-    background: url('items/bottom/GAME/听_普通与关闭后.svg') center/contain no-repeat;
+    position: absolute; right: 80px; bottom: 120px; width: 108px; height: 108px;
+    padding: 0; border: none; z-index: 74; cursor: pointer; border-radius: 50%;
+    background: #f2e6c8 url('items/bottom/GAME/听_普通与关闭后.svg') center/contain no-repeat;
+    box-shadow: 0 0 0 2px rgba(138,106,47,.95), 0 4px 12px rgba(0,0,0,.5);
     filter: drop-shadow(0 3px 9px rgba(0,0,0,.55));
   }
   #ready-btn:hover { background-image: url('items/bottom/GAME/听_悬停.svg'); }
   #ready-btn.on { background-image: url('items/bottom/GAME/听_点击与开启后.svg'); }
   #ready-btn.disabled { filter: grayscale(1) brightness(.55); cursor: not-allowed; }
+  #ready-btn.can-ready { animation: readyPulse 1.1s ease-in-out infinite; }
+  @keyframes readyPulse {
+    0%, 100% { filter: drop-shadow(0 0 3px rgba(255,209,102,.65)); }
+    50% { filter: drop-shadow(0 0 16px rgba(255,209,102,1)); }
+  }
   #ready-btn.hidden { display: none; }
   #draw-btns button {
     padding: 9px 18px; font-size: 15px; border-radius: 9px; cursor: pointer;
@@ -4107,6 +4113,11 @@ function render(){
   } else {
     hint = '…';
   }
+  // 自己回合且手上已能听牌时，额外提示按「听」报听
+  if (phase === 'discarding' && currentSeat === 0 && players[0] && !players[0].riichi
+      && tenpaiTiles(players[0].hand, players[0].melds.length).length > 0){
+    hint += '（已可听牌，点「听」报听）';
+  }
   document.getElementById('hint').textContent = hint;
 
   // 开局换牌按钮 / 倒计时
@@ -4125,14 +4136,15 @@ function render(){
     }
   }
 
-  // 报听按钮：只在牌局中显示；只有自己出牌阶段可开关
+  // 报听按钮：常驻显示（方便随时诈听）；只有自己出牌阶段可开关
   const readyBtn = document.getElementById('ready-btn');
-  if (readyBtn){
-    const inHand = players.length === 4 && phase !== 'over' && phase !== 'swap';
-    if (inHand) readyBtn.classList.remove('hidden'); else readyBtn.classList.add('hidden');
+  if (readyBtn && players.length === 4){
+    readyBtn.classList.remove('hidden');
     if (players[0] && players[0].riichi) readyBtn.classList.add('on'); else readyBtn.classList.remove('on');
     const canToggle = phase === 'discarding' && currentSeat === 0 && !daGivePending && players[0] && players[0].isHuman;
     if (canToggle) readyBtn.classList.remove('disabled'); else readyBtn.classList.add('disabled');
+    const canReadyNow = canToggle && !players[0].riichi && tenpaiTiles(players[0].hand, players[0].melds.length).length > 0;
+    if (canReadyNow) readyBtn.classList.add('can-ready'); else readyBtn.classList.remove('can-ready');
   }
 
   renderActions();
