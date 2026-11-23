@@ -628,11 +628,11 @@
   /* 左边玩家的卡背与右边镜像：再转 180°（即 270°） */
   #p-left .hand-row.side-hand .tile { transform: rotate(270deg); }
   .hand-row.side-hand .tile + .tile { margin-top: var(--sideOverlap, -20px); }
-  /* 四家手牌各向自己一侧的桌边靠 3px（纯视觉位移，不影响按钮/牌河/布局） */
-  #p-self  .hand-row { transform: translateY(3px); }
-  #p-top   .hand-row { transform: translateY(-3px); }
-  #p-left  .hand-row { transform: translateX(-3px); }
-  #p-right .hand-row { transform: translateX(3px); }
+  /* 四家手牌各向自己一侧的桌边靠（在上一次 3px 基础上再靠 3px，共 6px） */
+  #p-self  .hand-row { transform: translateY(6px); }
+  #p-top   .hand-row { transform: translateY(-6px); }
+  #p-left  .hand-row { transform: translateX(-6px); }
+  #p-right .hand-row { transform: translateX(6px); }
   .meld-row { display: flex; flex-wrap: wrap; gap: 2px; min-height: 30px; }
   .meld-row.side-meld .tile.small { flex: 0 0 auto; }
   /* 左右家鸣牌：一组一条竖线（牌转 90°/270°，和该玩家手牌同方向），多组并排 */
