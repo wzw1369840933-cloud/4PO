@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>四PO街 · 类麻将游戏 MVP</title>
 <style>
+  /* 倒计时专用字体（玩家提供） */
+  @font-face {
+    font-family: 'CountdownFont';
+    src: url('items/font/倒计时.ttf') format('truetype');
+    font-display: swap;
+  }
   :root {
     --bg: #0d5c3f;
     --felt: #0a4a32;
@@ -814,6 +820,29 @@
     display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
   }
   #draw-btns.hidden { display: none; }
+  /* 开局换牌：按钮 + 倒计时（倒计时与按钮同尺寸） */
+  #swap-bar {
+    position: absolute; left: 50%; bottom: 14.6%; transform: translateX(-50%);
+    z-index: 76; display: flex; align-items: center; gap: 10px;
+  }
+  #swap-bar.hidden { display: none; }
+  #swap-btn {
+    width: 84px; height: 84px; padding: 0; border: none; cursor: pointer;
+    background: url('items/bottom/GAME/换牌_未选牌_普通.svg') center/contain no-repeat;
+    filter: drop-shadow(0 3px 9px rgba(0,0,0,.55));
+  }
+  #swap-btn:hover { background-image: url('items/bottom/GAME/换牌_未选牌_悬停.svg'); }
+  #swap-btn:active { background-image: url('items/bottom/GAME/换牌_未选牌_点击.svg'); transform: scale(.96); }
+  #swap-btn.has-pick { background-image: url('items/bottom/GAME/换牌_已选牌_普通.svg'); }
+  #swap-btn.has-pick:hover { background-image: url('items/bottom/GAME/换牌_已选牌_悬停.svg'); }
+  #swap-btn.has-pick:active { background-image: url('items/bottom/GAME/换牌_已选牌_点击.svg'); }
+  #swap-countdown {
+    width: 84px; height: 84px; display: flex; align-items: center; justify-content: center;
+    font-family: 'CountdownFont', 'Microsoft YaHei', sans-serif;
+    font-size: 46px; line-height: 1; font-weight: 800;
+    color: #FFFFF0; text-shadow: 0 2px 8px rgba(0,0,0,.85);
+    font-variant-numeric: tabular-nums;
+  }
   #draw-btns button {
     padding: 9px 18px; font-size: 15px; border-radius: 9px; cursor: pointer;
     border: 1px solid #ccc; background: #2a2a2a; color: #eee; font-weight: 600;
@@ -950,6 +979,7 @@
   .hand-row.side-hand .tile.selected { transform: rotate(90deg); }
   #p-left .hand-row.side-hand .tile.selected { transform: rotate(270deg); }
   .tile.selected { outline: 2px solid var(--gold); transform: translateY(-6px); }
+  .tile.swap-picked { outline: 3px solid #ffd166; transform: translateY(-9px); box-shadow: 0 0 16px rgba(255,209,102,.95); }
   .tile.selected:hover { transform: translateY(-6px); }
   .tile[draggable="true"] { cursor: grab; }
   .tile[draggable="true"]:active { cursor: grabbing; }
@@ -1031,7 +1061,7 @@
   }
   #claim-select:empty, #street-select:empty { display: none; }
   .claim-select-head { font-size: 21px; color: #0e2340; font-weight: 800; text-shadow: 0 1px 4px rgba(255,255,255,.9), 0 0 10px rgba(255,255,255,.75); }
-  .claim-countdown { color: #b02a2a; font-weight: 800; font-size: 21px; margin-left: 8px; }
+  .claim-countdown { color: #b02a2a; font-weight: 800; font-size: 24px; margin-left: 8px; font-family: 'CountdownFont', 'Microsoft YaHei', sans-serif; }
   .claim-select-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
   .claim-card, .street-card {
     display: flex; align-items: center; gap: 6px;
@@ -1230,6 +1260,10 @@
     </div>
     <button id="call-skip-btn" class="hidden" title="鸣：开启后自动跳过鸣牌和搭（荣和、补杠、暗杠除外）"></button>
     <div id="draw-btns" class="hidden"></div>
+    <div id="swap-bar" class="hidden">
+      <button id="swap-btn" title="调：确认换牌（未选牌时点击 = 放弃）"></button>
+      <div id="swap-countdown">30</div>
+    </div>
     <div id="win-modal" class="hidden"></div>
   </div>
   </div>
@@ -1289,8 +1323,8 @@
 
         <h3>开局与一圈</h3>
         <ul>
-          <li>每次进入单人游戏或点「重新开始」，都会在四家里<b>随机</b>选一名庄家，开始新的一圈。</li>
-          <li>每人发 13 张，庄家先摸 1 张（14 张）先出牌。</li>
+          <li>每次进入单人游戏，都会在四家里<b>随机</b>选一名庄家，开始新的一圈。</li>
+          <li>每人发 13 张，进入<b>开局换牌</b>阶段；换牌结束后庄家才摸第 14 张先出牌。</li>
           <li><b>连庄</b>：庄家单独和牌（自摸 / 荣和，且只有他一个赢家）→ 下一局继续由他坐庄。</li>
           <li><b>下庄</b>：流局，或别家和牌（含一炮多响）→ 庄家传给下家（你 → AI·右 → AI·上 → AI·左 → 你）。</li>
           <li>四家都坐过庄、并且都下过庄后，<b>一圈结束</b>；结算面板里点「开新一圈」，庄家重新随机。</li>
@@ -1298,6 +1332,14 @@
           <li><b>街牌区太多时</b>：如果发牌前牌堆不够 53 张，会让每家把街牌区随机一半（四舍五入）洗回牌堆，再发牌。</li>
           <li><b>「重新开始」</b>：第 1 圈第 1 局会重开整局（圈数仍是第 1 圈、庄家重新随机）；其他局面只重开<b>当前这一局</b>，圈数 / 局数 / 庄家和本局开始时的街牌区都保持不变。</li>
           <li>中央「牌墙剩余」下方显示当前街名：<b>壹道春一街</b>（第 1 圈、第 1 个庄家、第 1 局）→ 连庄 <b>壹道春二街</b> → 下庄后 <b>壹道夏一街</b> → 秋 → 冬；第二圈就是 <b>贰道春一街</b>。</li>
+        </ul>
+
+        <h3>开局换牌（调）</h3>
+        <ul>
+          <li>每局发完 13 张后，先进入 <b>30 秒</b>换牌阶段；此时庄家还没摸第 14 张。</li>
+          <li>点击手牌选择，<b>最多 5 张</b>；点「调」确认后，选中的牌放进自己的街牌区，并从牌堆补等量张。</li>
+          <li>四家都换完（超时视为放弃）后，庄家摸第 14 张，开始游戏。</li>
+          <li>换牌放进街牌区的牌和普通街牌一样，下一局继续保留、不洗回牌堆。</li>
         </ul>
 
         <h3>牌库</h3>
@@ -1955,6 +1997,15 @@ let roundSummaryOpen = false; // 是否显示一圈总结
 let dealerContinued = false;  // 本局是否为连庄
 let dealerTenureHands = 1;    // 当前庄家在本圈内第几次坐庄（含连庄）
 let handStartSnapshot = null; // 本局开始时的快照（重新开始本局用）
+// 开局换牌（调）状态
+let swapEnabled = true;
+let swapActive = false;
+let swapHumanDone = false;
+let swapSelected = new Set();
+let swapDone = [false, false, false, false];
+let swapRemaining = 30;
+let swapIntervalId = null;
+let swapAiTimers = [];
 let bannedStreetKey = null; // 本回合禁止置入街牌区的牌 key（防循环）
 let claimGen = 0;          // 鸣牌窗口代数，用于作废旧的 10 秒计时器
 let claimRemaining = 10;   // 鸣牌窗口倒计时秒数
@@ -2065,6 +2116,7 @@ function buildDeckWithoutStreet(streets){
 // opts: { dealer, streets } —— 不传时保持旧行为（庄家 0、街牌区为空），方便测试
 function startGame(opts){
   opts = opts || {};
+  resetSwapState();
   let carry = (opts.streets || [[],[],[],[]]).map(st => (st || []).slice());
   const need = START_TILES * PLAYER_COUNT + 1;
   let deck = buildDeckWithoutStreet(carry);
@@ -2104,27 +2156,181 @@ function startGame(opts){
   for (let i = 0; i < PLAYER_COUNT; i++) players[i].street = carry[i];
   wall = deck.slice();
   dealerSeat = Number.isInteger(opts.dealer) ? ((opts.dealer % PLAYER_COUNT) + PLAYER_COUNT) % PLAYER_COUNT : 0;
-  // 发牌
+  // 发牌（先各 13 张；庄家的第 14 张等换牌阶段结束后再摸）
   for (let i = 0; i < START_TILES; i++){
     for (let s = 0; s < PLAYER_COUNT; s++){
       players[s].hand.push(wall.pop());
     }
+  }
+  const doSwap = !!opts.swap;
+  currentSeat = dealerSeat;
+  phase = 'discarding';
+  pendingClaim = null; pendingDiscard = null; daGivePending = false;
+  drawChoice = false; drawFromStreet = false; streetPick = false; wallEndPick = false; bannedStreetKey = null;
+  discardCount = 0;
+  drawnTileId = null; selectedTileId = null;
+  sortHands();
+  applySortToSelf();
+  if (doSwap){
+    resetSwapState();
+    startSwapPhase();
+    render();
+    return;
   }
   // 庄家先摸一张（14 张）
   players[dealerSeat].hand.push(wall.pop());
   // 庄家首摸的牌同样视为“刚摸的牌”（区分显示 + 摸切判定）
   drawnTileId = players[dealerSeat].hand[players[dealerSeat].hand.length - 1].id;
   players[dealerSeat].lastWallDraw = drawnTileId;
-  currentSeat = dealerSeat;
   phase = 'discarding';
-  pendingClaim = null; pendingDiscard = null; daGivePending = false;
-  drawChoice = false; drawFromStreet = false; streetPick = false; wallEndPick = false; bannedStreetKey = null;
-  discardCount = 0;
-  sortHands();
-  applySortToSelf();
   render();
   if (!roundActive) log('新的一局开始，' + players[dealerSeat].name + ' 为庄家。');
   afterStateChange();
+}
+
+// ---------------- 开局换牌（调） ----------------
+function stopSwapTimer(){
+  if (swapIntervalId != null){ clearInterval(swapIntervalId); swapIntervalId = null; }
+}
+function resetSwapState(){
+  stopSwapTimer();
+  for (const t of swapAiTimers) clearTimeout(t);
+  swapAiTimers = [];
+  swapActive = false;
+  swapHumanDone = false;
+  swapSelected = new Set();
+  swapDone = [false, false, false, false];
+  swapRemaining = 30;
+}
+function updateSwapCountdown(){
+  const el = document.getElementById('swap-countdown');
+  if (!el) return;
+  el.textContent = swapRemaining;
+  el.style.color = swapRemaining <= 10 ? '#FC2900' : '#FFFFF0';
+}
+function tickSwap(){
+  if (!swapActive || swapHumanDone){ stopSwapTimer(); return; }
+  swapRemaining--;
+  if (swapRemaining <= 0){
+    swapRemaining = 0;
+    updateSwapCountdown();
+    finishSwapForHuman(true);
+    return;
+  }
+  updateSwapCountdown();
+}
+function startSwapPhase(){
+  stopSwapTimer();
+  for (const t of swapAiTimers) clearTimeout(t);
+  swapAiTimers = [];
+  swapActive = true;
+  swapHumanDone = false;
+  swapSelected = new Set();
+  swapDone = [false, false, false, false];
+  swapRemaining = 30;
+  phase = 'swap';
+  currentSeat = dealerSeat;
+  log('开局换牌：30 秒内可选择至多 5 张手牌，点「调」确认；超时视为放弃。', true);
+  updateSwapCountdown();
+  swapIntervalId = setInterval(() => {
+    tickSwap();
+  }, 1000);
+  for (let s = 1; s < PLAYER_COUNT; s++){
+    const delay = 700 + Math.floor(Math.random() * 1800);
+    swapAiTimers.push(setTimeout(() => aiSwap(s), delay));
+  }
+}
+function executeSwap(p, tiles){
+  const maxDraw = Math.max(0, wall.length - 1); // 留一张给庄家摸第 14 张
+  const n = Math.min(tiles.length, maxDraw);
+  if (n <= 0){ log(p.name + ' 换牌：牌堆不够，放弃。'); return 0; }
+  const chosen = tiles.slice(0, n);
+  const moved = [];
+  for (const t of chosen){
+    removeTile(p.hand, t.id);
+    p.street.push(t);
+    moved.push(t);
+  }
+  for (let k = 0; k < n; k++) p.hand.push(wall.pop());
+  p.repairAllowed = false;
+  sortHands();
+  log(p.name + ' 换牌：' + moved.map(tileText).join(' ') + ' → 街牌区，从牌堆补 ' + n + ' 张。', true);
+  return n;
+}
+function toggleSwapPick(id){
+  if (!swapActive || swapHumanDone) return;
+  if (swapSelected.has(id)) swapSelected.delete(id);
+  else {
+    if (swapSelected.size >= 5){ log('开局换牌：最多选择 5 张。'); return; }
+    swapSelected.add(id);
+  }
+  render();
+}
+function finishSwapForHuman(declined){
+  if (!swapActive || swapHumanDone) return;
+  swapHumanDone = true;
+  swapDone[0] = true;
+  stopSwapTimer();
+  if (!declined){
+    const picks = Array.from(swapSelected)
+      .map(id => players[0].hand.find(t => t.id === id))
+      .filter(Boolean);
+    executeSwap(players[0], picks);
+  } else {
+    log('开局换牌：你放弃了换牌。', true);
+  }
+  swapSelected.clear();
+  const bar = document.getElementById('swap-bar');
+  if (bar) bar.classList.add('hidden');
+  render();
+  checkSwapComplete();
+}
+function confirmSwap(){
+  if (!swapActive || swapHumanDone) return;
+  if (swapSelected.size === 0){ finishSwapForHuman(true); return; }
+  finishSwapForHuman(false);
+}
+function aiSwap(seat){
+  if (!swapActive || swapDone[seat]) return;
+  swapDone[seat] = true;
+  const p = players[seat];
+  const want = Math.floor(Math.random() * 3); // AI 换 0~2 张
+  if (want > 0 && wall.length > 1){
+    const pool = p.hand.slice();
+    const picks = [];
+    for (let k = 0; k < want; k++){
+      const t = aiChooseDiscard(pool);
+      if (!t) break;
+      picks.push(t);
+      const idx = pool.findIndex(x => x.id === t.id);
+      if (idx >= 0) pool.splice(idx, 1);
+    }
+    if (picks.length) executeSwap(p, picks);
+  }
+  checkSwapComplete();
+}
+function checkSwapComplete(){
+  if (!swapActive) return;
+  if (swapDone.every(Boolean)) finishSwapPhase();
+}
+function finishSwapPhase(){
+  if (!swapActive) return;
+  swapActive = false;
+  stopSwapTimer();
+  for (const t of swapAiTimers) clearTimeout(t);
+  swapAiTimers = [];
+  swapSelected.clear();
+  const bar = document.getElementById('swap-bar');
+  if (bar) bar.classList.add('hidden');
+  log('开局换牌结束，' + players[dealerSeat].name + ' 摸第 14 张，开始游戏。', true);
+  phase = 'discarding';
+  currentSeat = dealerSeat;
+  if (wall.length > 0){
+    playerDraw(dealerSeat);
+  } else {
+    render();
+    afterStateChange();
+  }
 }
 
 // ---------------- 一圈 / 庄家轮转 ----------------
@@ -2204,7 +2410,7 @@ function restartCurrentHand(){
   roundEnded = false;
   roundSummaryOpen = false;
   handResult = null;
-  startGame({ dealer: snap.dealer, streets: snap.streets.map(s => s.slice()) });
+  startGame({ dealer: snap.dealer, streets: snap.streets.map(s => s.slice()), swap: swapEnabled });
   captureHandStart();
   log('第' + roundNo + '圈 · 第' + handNo + '局重新开始：' + players[dealerSeat].name + ' 坐庄', true);
 }
@@ -2223,7 +2429,7 @@ function startHand(dealer, streets, note){
   handNo++;
   dealerContinued = (note === '连庄');
   dealerTenureHands = dealerContinued ? dealerTenureHands + 1 : 1;
-  startGame({ dealer, streets });
+  startGame({ dealer, streets, swap: swapEnabled });
   captureHandStart();
   log('第' + roundNo + '圈 · 第' + handNo + '局' + (note ? '（' + note + '）' : '') + '：' + players[dealer].name + ' 坐庄');
 }
@@ -3346,6 +3552,7 @@ function declineTsumoWin(){
 }
 
 function humanClickTile(id){
+  if (phase === 'swap'){ toggleSwapPick(id); return; }
   if (daGivePending){
     // 搭牌：选一张手牌放入街牌区，然后获得搭到的牌
     const c = pendingClaim;
@@ -3562,6 +3769,7 @@ function renderHandTile(handRow, t, isDrawn){
   const el = tileEl(t, { big:true });
   if (isDrawn) el.classList.add('just-drawn');
   if (t.id === selectedTileId) el.classList.add('selected');
+  if (swapActive && swapSelected.has(t.id)) el.classList.add('swap-picked');
   if (banned){
     el.classList.add('banned');
   } else {
@@ -3779,7 +3987,11 @@ function render(){
 
   // 提示
   let hint = '';
-  if (phase === 'over'){
+  if (phase === 'swap'){
+    hint = swapHumanDone
+      ? '等待其他玩家换牌…'
+      : '开局换牌：点击手牌选择（至多 5 张），点「调」确认；超时视为放弃';
+  } else if (phase === 'over'){
     hint = '本局结束，点击下方按钮继续';
   } else if (wallEndPick){
     hint = '牌堆已空：选择从谁的街牌区摸牌，牌会直接打进牌河';
@@ -3801,6 +4013,22 @@ function render(){
     hint = '…';
   }
   document.getElementById('hint').textContent = hint;
+
+  // 开局换牌按钮 / 倒计时
+  const swapBar = document.getElementById('swap-bar');
+  if (swapBar){
+    if (phase === 'swap' && !swapHumanDone){
+      swapBar.classList.remove('hidden');
+      updateSwapCountdown();
+      const sb = document.getElementById('swap-btn');
+      if (sb){
+        if (swapSelected.size > 0) sb.classList.add('has-pick');
+        else sb.classList.remove('has-pick');
+      }
+    } else {
+      swapBar.classList.add('hidden');
+    }
+  }
 
   renderActions();
   renderWinModal();
@@ -4287,6 +4515,7 @@ document.getElementById('restart').addEventListener('click', () => {
   document.getElementById('log').innerHTML = '';
   restartAction();
 });
+document.getElementById('swap-btn').addEventListener('click', () => confirmSwap());
 document.getElementById('rules-btn').addEventListener('click', () => {
   renderKongDemos();
   document.getElementById('rules-overlay').classList.remove('hidden');
@@ -4511,6 +4740,9 @@ document.getElementById('back-menu').addEventListener('click', backToMenu);
 window.__game = {
   startGame, humanClickTile, humanClaim, humanClaimOption, humanDraw, streetPickFrom, canWin, canWinStrict, isNormalTile, winningTiles, winningTilesStrict, playerDraw, declareWin, onDeclineRon, applySortToSelf, patternSortTiles, doKakan, doAnkan, kongDraw, collectClaimOptions, repairCandidates, doRepair, meldMajorSuit, render, aiDoTurn, calcJokerBonus, jokerMeldBonus, isJoker, canWinWithJokers,
   startRound, nextHand, dealerAdvance, handEndsRound, recordHandResult, wallStreetDiscard, wallStreetSources, wallEndPickFrom, tileEl, meldTileSpecs, restartAction, restartCurrentHand,
+  toggleSwapPick, confirmSwap, finishSwapForHuman, aiSwap, finishSwapPhase, tickSwap,
+  getSwap(){ return { active: swapActive, humanDone: swapHumanDone, remaining: swapRemaining, selected: [...swapSelected], done: swapDone.slice() }; },
+  setSwapEnabled(v){ swapEnabled = !!v; },
   getRound(){ return { active: roundActive, no: roundNo, handNo, passed: roundPassed.slice(), wins: roundWins.slice(), draws: roundDraws, ended: roundEnded, summaryOpen: roundSummaryOpen, result: handResult, title: streetTitle(), tenure: dealerTenureHands }; },
   setSortMode(m){ sortMode = m; },
   setCurrentSeat(s){ currentSeat = s; },
