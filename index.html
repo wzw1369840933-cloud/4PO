@@ -3898,17 +3898,18 @@ function render(){
     streetRow.appendChild(streetLabel);
     const st = players[seat].street;
     if (st.length > 0){
-      // 只显示最后一张 + 「×N」张数
-      streetRow.appendChild(tileEl(st[st.length - 1], { small:true }));
+      // 只显示最后一张 + 「×N」张数；浮空窗只在悬停这张牌的图片上时出现
+      const topTileEl = tileEl(st[st.length - 1], { small:true });
+      topTileEl.addEventListener('mouseenter', (e) => showStreetTip(seat, e));
+      topTileEl.addEventListener('mousemove', (e) => moveStreetTip(e));
+      topTileEl.addEventListener('mouseleave', hideStreetTip);
+      streetRow.appendChild(topTileEl);
       if (st.length > 1){
         const cnt = document.createElement('span');
         cnt.className = 'street-count';
         cnt.textContent = '×' + st.length;
         streetRow.appendChild(cnt);
       }
-      streetRow.addEventListener('mouseenter', (e) => showStreetTip(seat, e));
-      streetRow.addEventListener('mousemove', (e) => moveStreetTip(e));
-      streetRow.addEventListener('mouseleave', hideStreetTip);
     }
     root.appendChild(streetRow);
     if (isSide) sideRefs[seat] = { root, handRow };
