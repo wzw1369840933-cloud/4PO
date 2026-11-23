@@ -1329,6 +1329,7 @@
         <p><b>多种鸣牌时</b>：手牌区上方会弹出选择窗口，列出所有可鸣类型（如 ♣3 可同时 碰333 / 吃A23 / 吃234 / 吃345），点选其一即可。</p>
         <p><b>同色替换</b>：♠♣ 为黑、♥♦ 为红；碰 / 吃 / 杠 / 和都可以用同色不同花替代（如 ♠A♠A♣A、♠3♣4♠5），杠最多替代一张（4-0 或 3-1）。放弃同色和张会进入同色振听；鸣出同色面子后，摸牌时可以「复原」。</p>
         <p><b>同色和牌</b>：听同色张时，例如听 ♠3，则 ♣3 与 ♠3 都可以和。</p>
+        <p><b>同色和牌后的处理</b>：如果和牌张是靠同色替代完成的，和牌后该玩家的手牌与鸣牌区会洗乱后放进自己的街牌区，下一局继续保留（不洗回牌堆）；普通和牌则正常回到牌堆。</p>
         <div class="kong-case" data-kong-group="sub"></div>
         <p><b>搭</b>：任意玩家可拿走别家刚打出的牌（无匹配要求），但须把自己的一张牌放入「街牌区」，且<b>不影响行动顺序</b>。</p>
         <p><b>搭的惩罚</b>：如果玩家在<b>一巡内使用过两次搭</b>，则会进入惩罚 —— <b>两私巡内不能搭、不能鸣牌、只能自摸和牌，且打出的牌自动置入街牌区</b>。</p>
@@ -3073,6 +3074,20 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
     hand: p.hand.slice(),
     melds: p.melds.map(m => ({ type: m.type, sub: !!m.sub, how: m.how || 'minkan', tiles: m.tiles.slice() })),
   };
+  // 同色和牌：和牌张靠同色替代完成时，手牌 + 鸣牌区洗乱后放进街牌区，下一局继续保留
+  const handBeforeWin = p.hand.filter(t => !(winTile && t.id === winTile.id));
+  const sameColorWin = !!(winTile && !isNormalTile(handBeforeWin, p.melds.length, winTile));
+  if (sameColorWin){
+    const moved = p.hand.slice();
+    for (const m of p.melds) moved.push(...m.tiles);
+    shuffle(moved);
+    p.street.push(...moved);
+    // 牌已经移进街牌区：手牌/鸣牌区清空（和牌展示仍用 winInfo 的快照）
+    p.hand.length = 0;
+    p.melds = [];
+    p.winTileId = null;
+    log('同色和牌：' + p.name + ' 的手牌与鸣牌区（' + moved.length + ' 张）洗乱后放进街牌区，下一局保留', true);
+  }
   render();
 }
 function gameDraw(){
