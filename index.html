@@ -489,36 +489,36 @@
   /* 牌河里的牌本身仍可悬停（显示牌名） */
   .river-zone .tile {
     pointer-events: auto;
-    /* 固定格位区域（不显示空槽）：上下 8列×5行=40，左右 7列×6=42 */
+    /* 主牌河固定 7 列 × 4 行 = 28 张；副牌河另算 */
   }
   /* 上方（AI·上）：横排，从靠近他的一侧（上）往中心填 */
   #river-2 {
-    width: 304px;   /* 每行 9 张：9 × 32 + 8 × 2 */
-    height: 248px;  /* 5 行，共 45 张容量 */
+    width: 304px;   /* 7 张/行：7 × 41 + 6 × 2 */
+    height: 248px;  /* 4 行：4 × 60 + 3 × 2 */
     flex-direction: row-reverse; /* 对家视角的「从左到右」= 桌面右→左 */
     flex-wrap: wrap-reverse; /* 从里往外：第一行贴中心，往上长 */
     align-content: flex-start;
     justify-content: flex-start; /* 贴内侧对齐（上一版样式） */
-    bottom: calc(50% + 152px); /* 与 9 列半宽一致，中央空出 304×304 正方形 */
+    bottom: calc(50% + 152px); /* 与 7 列半宽一致，中央空出 304×304 正方形 */
     left: 50%;
     transform: translateX(-50%);
   }
   /* 下方（你）：横排，从下往上填（最新靠近中心） */
   #river-0 {
-    width: 304px;   /* 每行 9 张 */
-    height: 248px;  /* 5 行，共 45 张容量 */
+    width: 304px;   /* 7 张/行 */
+    height: 248px;  /* 4 行 */
     flex-direction: row; /* 从左到右填充 */
     flex-wrap: wrap; /* 从里往外：第一行贴中心，往下长 */
     align-content: flex-start;
     justify-content: flex-start; /* 贴内侧对齐（上一版样式） */
-    top: calc(50% + 152px); /* 与 9 列半宽一致，中央空出 304×304 正方形 */
+    top: calc(50% + 152px); /* 与 7 列半宽一致，中央空出 304×304 正方形 */
     left: 50%;
     transform: translateX(-50%);
   }
   /* 左方（AI·左）：竖排（每行竖成一列），从左侧往中心填 */
   #river-3 {
-    width: 250px;   /* 5 列 × (48+2) */
-    height: 306px;  /* 每列 9 张，共 45 张容量 */
+    width: 250px;   /* 4 列 × (60+2) */
+    height: 306px;  /* 每列 7 张：7 × (41+2) */
     flex-direction: column;
     flex-wrap: wrap-reverse; /* 从里往外：第一列贴中心，往左长 */
     align-content: flex-start;
@@ -529,8 +529,8 @@
   }
   /* 右方（AI·右）：竖排，从右侧往中心填 */
   #river-1 {
-    width: 250px;   /* 5 列 × (48+2) */
-    height: 306px;  /* 每列 9 张，共 45 张容量 */
+    width: 250px;   /* 4 列 × (60+2) */
+    height: 306px;  /* 每列 7 张 */
     flex-direction: column-reverse; /* 下家视角的「从左到右」= 桌面下→上 */
     flex-wrap: wrap; /* 从里往外：第一列贴中心，往右长 */
     align-content: flex-start;
@@ -583,12 +583,14 @@
     border: 2px solid var(--gold);
     box-shadow: 0 0 8px rgba(233,196,106,.85);
   }
-  .river-zone .tile.small { width: 36px; height: 54px; }   /* 主牌河：8 张/行 × 4 行 = 32 */
+  .river-zone .tile.small { width: 41px; height: 60px; }   /* 主牌河：7 张/行 × 4 行 = 28 */
   /* 左右两家牌河：牌横放（麻将习惯） */
   .river-rot {
     width: 54px; height: 36px;
     display: flex; align-items: center; justify-content: center;
   }
+  /* 左右主牌河的旋转占位要与放大后的主牌河一致（60 × 41） */
+  #river-1 .river-rot, #river-3 .river-rot { width: 60px; height: 41px; }
   .river-rot > .tile.small { transform: rotate(90deg); }
   .river-rot.rot-cw  > .tile.small { transform: rotate(90deg); }   /* 左家：顺时针 90° */
   .river-rot.rot-ccw > .tile.small { transform: rotate(-90deg); }  /* 右家：逆时针 90° */
@@ -4046,8 +4048,8 @@ function render(){
   }
 
   // 中间牌河（俯瞰视角，每人一格，往中间聚拢）
-  // 主牌河 32 张（8×4），放满后溢出到副牌河 32 张（8×4）
-  const RIVER_MAIN_CAP = 32;
+  // 主牌河 28 张（7×4），放满后溢出到副牌河
+  const RIVER_MAIN_CAP = 28;
   for (let seat = 0; seat < PLAYER_COUNT; seat++){
     const zone = document.getElementById('river-' + seat);
     const subZone = document.getElementById('river-sub-' + seat);
