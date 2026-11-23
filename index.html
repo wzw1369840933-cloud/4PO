@@ -598,6 +598,30 @@
   .river-zone .tile.small .rk { font-size: 16px; }
   .river-zone .tile.small .st { font-size: 13px; }
 
+  /* 每家主牌河内侧上方预留的两张牌空位（按各自视角从左到右） */
+  .river-extra {
+    position: absolute; display: flex; gap: 2px; z-index: 3; pointer-events: none;
+  }
+  .river-extra .river-slot {
+    width: 41px; height: 60px; box-sizing: border-box; border-radius: 4px;
+    border: 1px dashed rgba(255,209,102,.34); background: rgba(0,0,0,.07);
+  }
+  /* 你（下）：横排，左→右 */
+  #river-extra-0 { left: 50%; top: calc(50% + 92px); transform: translateX(-50%); flex-direction: row; }
+  /* 对家（上）：横排，他的左→右 = 屏幕右→左 */
+  #river-extra-2 { left: 50%; top: calc(50% - 152px); transform: translateX(-50%); flex-direction: row-reverse; }
+  /* 左家：竖排，他的左→右 = 屏幕上→下；空位是横放牌（60×41） */
+  #river-extra-3 {
+    top: 50%; left: calc(50% - 152px); transform: translateY(-50%);
+    width: 60px; height: 84px; flex-direction: column;
+  }
+  /* 右家：竖排，他的左→右 = 屏幕下→上 */
+  #river-extra-1 {
+    top: 50%; left: calc(50% + 92px); transform: translateY(-50%);
+    width: 60px; height: 84px; flex-direction: column-reverse;
+  }
+  #river-extra-3 .river-slot, #river-extra-1 .river-slot { width: 60px; height: 41px; }
+
   .p-head { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 2px 0; }
   .dealer-dot {
     width: 10px; height: 10px; border-radius: 50%;
@@ -1268,6 +1292,10 @@
       <div class="river-zone river-sub" id="river-sub-1"></div>
       <div class="river-zone river-sub" id="river-sub-0"></div>
     </div>
+    <div class="river-extra" id="river-extra-0"><div class="river-slot"></div><div class="river-slot"></div></div>
+    <div class="river-extra" id="river-extra-2"><div class="river-slot"></div><div class="river-slot"></div></div>
+    <div class="river-extra" id="river-extra-3"><div class="river-slot"></div><div class="river-slot"></div></div>
+    <div class="river-extra" id="river-extra-1"><div class="river-slot"></div><div class="river-slot"></div></div>
     <div id="river-center">
       <div class="wall-label">牌墙剩余</div>
       <div class="wall-count" id="wall-count-center">0</div>
