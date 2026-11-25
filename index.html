@@ -93,6 +93,47 @@
     transform-origin: center center;
   }
   #game-screen.hidden { display: none; }
+
+  /* ---------------- 牌型测试页面 ---------------- */
+  #pattern-screen {
+    position: fixed; inset: 0; z-index: 250;
+    display: flex; align-items: center; justify-content: center;
+    background: url('items/image/B8A57BA1-5701-4605-9616-9FF95F947BD0.png') center / cover no-repeat;
+  }
+  #pattern-screen.hidden { display: none; }
+  #pattern-stage {
+    width: 1708px; height: 961px; padding: 22px;
+    display: flex; gap: 20px; transform-origin: center center;
+  }
+  .pt-box {
+    background: rgba(255,250,238,.9);
+    border: 2px solid #a97f43; border-radius: 16px;
+    box-shadow: 0 10px 26px rgba(74,44,16,.25);
+    padding: 14px 16px; display: flex; flex-direction: column; min-height: 0;
+  }
+  .pt-title {
+    font-size: 20px; color: #6b3f1d; font-weight: 800; text-align: center;
+    letter-spacing: 1px; margin-bottom: 8px;
+  }
+  .pt-note { color: #7b5b35; font-size: 14px; text-align: center; margin-top: 6px; }
+  #pt-left { width: 360px; flex: 0 0 360px; }
+  #pt-cards {
+    flex: 1 1 auto; overflow-y: auto; padding: 2px;
+    display: grid; grid-template-columns: repeat(6, 1fr);
+    gap: 5px 4px; justify-items: center; align-content: start;
+  }
+  #pt-cards .tile { width: 40px; height: 60px; }
+  #pt-cards .tile:hover { transform: translateY(-3px); }
+  #pt-center { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; }
+  #pt-table {
+    width: min(100%, 900px); aspect-ratio: 1 / 1;
+    background: url('items/image/牌型测试桌面.png') center / contain no-repeat;
+    filter: drop-shadow(0 10px 25px rgba(0,0,0,.25));
+  }
+  #pt-right { width: 360px; flex: 0 0 360px; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+  #pattern-menu-slot { flex: 0 0 auto; }
+  #pattern-menu-slot #menu-bar { width: 100%; flex: 0 0 auto; }
+  #pt-bottom { flex: 1 1 auto; justify-content: flex-start; }
   /* 三栏布局：左栏(顶部信息/宝牌区/日志) | 中栏(牌桌) | 右栏(菜单/牌型可能性/状态/聊天) */
   #col-left {
     width: 23%; min-width: 170px;
@@ -1381,6 +1422,25 @@
       <div class="panel-note">功能未实装，先设置窗口</div>
     </div>
   </div>
+  </div>
+
+  <div id="pattern-screen" class="hidden">
+    <div id="pattern-stage">
+      <div id="pt-left" class="pt-box">
+        <div class="pt-title">54 种牌</div>
+        <div id="pt-cards"></div>
+      </div>
+      <div id="pt-center">
+        <div id="pt-table"></div>
+      </div>
+      <div id="pt-right">
+        <div id="pattern-menu-slot"></div>
+        <div id="pt-bottom" class="pt-box">
+          <div class="pt-title">测试区</div>
+          <div class="pt-note">牌型测试功能预留</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="street-tip" class="hidden"></div>
@@ -5113,7 +5173,45 @@ function fitGameStage(){
   }
   el.style.transform = 'scale(' + s.toFixed(4) + ')';
 }
-if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', fitGameStage);
+function fitPatternStage(){
+  const el = document.getElementById('pattern-stage');
+  if (!el) return;
+  const vw = (typeof window !== 'undefined' && window.innerWidth) || GAME_STAGE_W;
+  const vh = (typeof window !== 'undefined' && window.innerHeight) || GAME_STAGE_H;
+  const s = Math.min(vw / GAME_STAGE_W, vh / GAME_STAGE_H);
+  el.style.transform = 'scale(' + s.toFixed(4) + ')';
+}
+if (typeof window !== 'undefined' && window.addEventListener){
+  window.addEventListener('resize', fitGameStage);
+  window.addEventListener('resize', fitPatternStage);
+}
+let patternPaletteBuilt = false;
+function buildPatternPalette(){
+  const host = document.getElementById('pt-cards');
+  if (!host || patternPaletteBuilt) return;
+  patternPaletteBuilt = true;
+  let id = 300000;
+  const order = [];
+  for (const s of ['s','h','d','c']) for (let r = RANK_MIN; r <= RANK_MAX; r++) order.push({ suit:s, rank:r, id:id++ });
+  order.push({ suit:'R', rank:0, id:id++ });
+  order.push({ suit:'Y', rank:0, id:id++ });
+  for (const t of order){
+    const el = tileEl(t, { small:true });
+    el.classList.add('pt-card');
+    el.title = tileText(t);
+    host.appendChild(el);
+  }
+}
+function openPatternTest(){
+  buildPatternPalette();
+  document.getElementById('menu-screen').classList.add('hidden');
+  document.getElementById('game-screen').classList.add('hidden');
+  document.getElementById('pattern-screen').classList.remove('hidden');
+  const bar = document.getElementById('menu-bar');
+  const slot = document.getElementById('pattern-menu-slot');
+  if (bar && slot && bar.parentElement !== slot) slot.appendChild(bar);
+  fitPatternStage();
+}
 function enterSingleGame(){
   document.getElementById('menu-screen').classList.add('hidden');
   document.getElementById('game-screen').classList.remove('hidden');
@@ -5122,13 +5220,31 @@ function enterSingleGame(){
   startRound();
 }
 function backToMenu(){
+  const ps = document.getElementById('pattern-screen');
+  if (ps && !ps.classList.contains('hidden')){
+    ps.classList.add('hidden');
+    const bar = document.getElementById('menu-bar');
+    const col = document.getElementById('col-right');
+    const before = document.getElementById('pattern-panel');
+    if (bar && col && bar.parentElement !== col) col.insertBefore(bar, before || col.firstChild);
+  }
   document.getElementById('game-screen').classList.add('hidden');
   document.getElementById('menu-screen').classList.remove('hidden');
 }
 document.getElementById('menu-btn-single').addEventListener('click', enterSingleGame);
 document.getElementById('menu-btn-multi').addEventListener('click', () => showMenuToast('多人游戏暂未开放'));
-document.getElementById('menu-btn-test').addEventListener('click', () => showMenuToast('牌型测试暂未开放'));
+document.getElementById('menu-btn-test').addEventListener('click', openPatternTest);
 document.getElementById('back-menu').addEventListener('click', backToMenu);
+// 牌型测试页里的「重新开始」只重置测试区，不重开后台单人对局
+document.getElementById('restart').addEventListener('click', (e) => {
+  const ps = document.getElementById('pattern-screen');
+  if (ps && !ps.classList.contains('hidden')){
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    const note = document.querySelector('#pt-bottom .pt-note');
+    if (note) note.textContent = '测试区已重置（功能预留）';
+  }
+}, true);
 
 // 暴露给自动化测试 / 调试（不影响正常游玩）
 window.__game = {
