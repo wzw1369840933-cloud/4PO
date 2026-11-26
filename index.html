@@ -1699,6 +1699,17 @@
         <p>吃：任意非放铳者都能吃，越靠近放铳者的下家越优先；J/Q/K 不能被吃。</p>
         <p><b>多种鸣牌时</b>：手牌区上方会弹出选择窗口，列出所有可鸣类型（如 ♣3 可同时 碰333 / 吃A23 / 吃234 / 吃345），点选其一即可。</p>
         <p><b>同色替换</b>：♠♣ 为黑、♥♦ 为红；碰 / 吃 / 杠 / 和都可以用同色不同花替代（如 ♠A♠A♣A、♠3♣4♠5），杠最多替代一张（4-0 或 3-1）。放弃同色和张会进入同色振听；鸣出同色面子后，摸牌时可以「复原」。</p>
+
+        <h3>同色牌型（定义）</h3>
+        <ul>
+          <li><b>同色牌型</b>：全部由同一种颜色（黑 ♠♣ / 红 ♥♦）组成，且包含<b>至少两种不同花色</b>的面子或将牌。</li>
+          <li><b>归属花色</b>：规则上，同色牌型按其数量<b>占多数</b>的花色，视为该花色的牌型。例：<b>♦2 ♥3 ♦4</b> 视为 <b>♦</b> 的顺子（♥3 是同色替代牌），但它仍然被标记为同色牌型。</li>
+          <li><b>1+1 将牌</b>：两张各一种同色花色的将牌（如 ♦3♥3、♠9♣9）没有多数花色，规则上可以视为其中任一花色的将牌，但仍然算同色牌型。</li>
+          <li><b>杠</b>：同色杠最多替代一张，归属花色取多数花色；4 张同花为普通杠，不是同色牌型。</li>
+          <li><b>两种判定并存</b>：花色类牌型（清一色、某花色牌型等）按<b>归属花色</b>判定；同色类牌型（需要同色替代/同色和）按<b>同色标记</b>判定。归入某花色不会取消它的同色身份。</li>
+          <li><b>整手牌</b>：若一手和牌可以按上述规则把所有面子和将牌都归属到同一花色，则整手牌也视为该花色的同色牌型；其中至少一组同色面子/将牌时，仍保留同色标记。</li>
+        </ul>
+
         <p><b>同色和牌</b>：听同色张时，例如听 ♠3，则 ♣3 与 ♠3 都可以和。</p>
         <p><b>同色和牌后的处理</b>：如果和牌张是靠同色替代完成的，和牌后该玩家的手牌与鸣牌区会洗乱后放进自己的街牌区，下一局继续保留（不洗回牌堆）；普通和牌则正常回到牌堆。</p>
         <div class="kong-case" data-kong-group="sub"></div>
@@ -2665,6 +2676,8 @@ function calcDoraPct(hand, melds){
 
 // ================== 和牌牌型注册表（框架） ==================
 // 后续导入的牌型统一写在这里；牌型测试、正式对局、菜单「和牌牌型」共用同一份定义。
+// 同色牌型：ctx.melds[i] 额外带 sameColor / rulesSuit / rulesSuits / substituteTiles。
+// 规则上按多数花色归属（♦2♥3♦4 → 归属 ♦），但 sameColor 仍为 true；1+1 将牌 rulesSuit 为 null、rulesSuits 有两种。
 // 结构：
 // registerWinPattern({
 //   id:'unique_id', name:'牌型名', desc:'说明',
@@ -2732,6 +2745,32 @@ function winPatternBonusText(p){
   if (p.bonusPoints) parts.push((p.bonusPoints > 0 ? '+' : '') + p.bonusPoints + '分');
   return parts.length ? parts.join(' + ') : '基础牌型';
 }
+function analyzeSameColorGroup(tiles){
+  const normal = (tiles || []).filter(t => !isJoker(t));
+  const counts = {};
+  for (const t of normal) counts[t.suit] = (counts[t.suit] || 0) + 1;
+  const suits = Object.keys(counts);
+  const sameColor = suits.length > 1 && suits.every(s => suitColor(s) === suitColor(suits[0]));
+  let rulesSuit = null, rulesSuits = [], substituteTiles = [];
+  if (suits.length === 1){
+    rulesSuit = suits[0];
+    rulesSuits = [rulesSuit];
+  } else if (sameColor){
+    const max = Math.max(...suits.map(s => counts[s]));
+    rulesSuits = suits.filter(s => counts[s] === max);
+    rulesSuit = rulesSuits.length === 1 ? rulesSuits[0] : null;   // 1+1 将牌：两种都可
+    if (rulesSuit) substituteTiles = normal.filter(t => t.suit !== rulesSuit);
+  }
+  return {
+    sameColor,
+    rulesSuit,
+    rulesSuits,
+    flexible: sameColor && !rulesSuit,
+    counts,
+    suits,
+    substituteTiles,
+  };
+}
 function normalizePatternMeld(m){
   if (!m) return { type:'pong', tiles:[], sub:false, concealed:false, how:'' };
   const tiles = (m.tiles || []).slice();
@@ -2740,12 +2779,18 @@ function normalizePatternMeld(m){
     const kind = String(m.kind || '');
     type = kind.includes('杠') ? 'kong' : (kind.includes('吃') ? 'chi' : 'pong');
   }
+  const colorInfo = analyzeSameColorGroup(tiles);
   return {
     type,
     tiles,
     sub: m.sub != null ? !!m.sub : (typeof hasSubstitution === 'function' ? hasSubstitution(tiles) : false),
     concealed: !!m.concealed || m.how === 'ankan',
     how: m.how || '',
+    sameColor: colorInfo.sameColor,
+    rulesSuit: colorInfo.rulesSuit,
+    rulesSuits: colorInfo.rulesSuits,
+    substituteTiles: colorInfo.substituteTiles,
+    colorInfo,
   };
 }
 function buildPatternContext(hand, melds, opts){
@@ -2808,15 +2853,33 @@ function sumWinPatterns(hits){
 const WinPatternUtil = {
   isJoker, suitColor, tileText,
   normalTiles(ctx){ return (ctx.allTiles || []).filter(t => !isJoker(t)); },
-  suits(ctx){ return new Set(this.normalTiles(ctx).map(t => t.suit)); },
+  // 花色归属：同色面子按「归属花色」计入，不再把替代牌的花色算进来
+  suits(ctx){
+    const set = new Set();
+    for (const t of ctx.hand || []) if (!isJoker(t)) set.add(t.suit);
+    for (const m of ctx.melds || []){
+      if (m.sameColor){
+        if (m.rulesSuit) set.add(m.rulesSuit);
+        else for (const s of m.rulesSuits || []) set.add(s);
+      } else {
+        for (const t of m.tiles || []) if (!isJoker(t)) set.add(t.suit);
+      }
+    }
+    return set;
+  },
   colors(ctx){ return new Set(this.normalTiles(ctx).map(t => suitColor(t.suit))); },
-  allSameSuit(ctx){ return this.suits(ctx).size <= 1; },   // 王牌视为任意花色
+  allSameSuit(ctx){ return this.suits(ctx).size <= 1; },   // 王牌视为任意花色，同色面子按归属花色
   allSameColor(ctx){ return this.colors(ctx).size <= 1; },
   hasRank(ctx, rank){ return this.normalTiles(ctx).some(t => t.rank === rank); },
   countRank(ctx, rank){ return this.normalTiles(ctx).filter(t => t.rank === rank).length; },
   meldTypes(ctx){ return (ctx.melds || []).map(m => m.type); },
   allMeldsTriplets(ctx){ return (ctx.melds || []).every(m => m.type === 'pong' || m.type === 'kong'); },
   hasHonorTiles(ctx){ return this.normalTiles(ctx).some(t => t.rank >= 11 && t.rank <= 13); },
+  groupInfo(tiles){ return analyzeSameColorGroup(tiles); },
+  sameColorMelds(ctx){ return (ctx.melds || []).filter(m => m.sameColor); },
+  hasSameColorMeld(ctx){ return this.sameColorMelds(ctx).length > 0; },
+  meldRulesSuit(m){ return m.rulesSuit; },
+  meldsAllRulesSuit(ctx, suit){ return (ctx.melds || []).every(m => m.rulesSuit === suit || (m.rulesSuits || []).includes(suit)); },
 };
 // 后续示例：
 // registerWinPattern({
@@ -6060,7 +6123,7 @@ window.__game = {
   registerWinPattern, getWinPattern, getWinPatterns(){ return WIN_PATTERNS.slice(); },
   matchWinPatterns, selectWinPatterns, sumWinPatterns, buildPatternContext,
   enableWinPattern, disableWinPattern, isWinPatternEnabled, winPatternBonusText,
-  openWinPatternList, renderWinPatternList, WinPatternUtil,
+  openWinPatternList, renderWinPatternList, WinPatternUtil, analyzeSameColorGroup,
   getWinInfo(){ return winInfo; },
   getSwap(){ return { active: swapActive, humanDone: swapHumanDone, remaining: swapRemaining, selected: [...swapSelected], done: swapDone.slice() }; },
   setSwapEnabled(v){ swapEnabled = !!v; },
