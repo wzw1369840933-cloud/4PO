@@ -122,13 +122,103 @@
     display: grid; grid-template-columns: repeat(6, 1fr);
     gap: 5px 4px; justify-items: center; align-content: start;
   }
-  #pt-cards .tile { width: 40px; height: 60px; }
+  #pt-cards .tile { width: 40px; height: 60px; position: relative; cursor: pointer; transition: transform .12s ease; }
   #pt-cards .tile:hover { transform: translateY(-3px); }
+  #pt-cards .tile.pt-empty { opacity: .3; filter: grayscale(1); cursor: default; }
+  #pt-cards .pt-count {
+    position: absolute; right: -2px; bottom: -2px; z-index: 2;
+    background: rgba(0,0,0,.72); color: #ffe6a7;
+    border: 1px solid rgba(233,196,106,.75); border-radius: 8px;
+    font-size: 11px; line-height: 1; padding: 2px 4px; pointer-events: none;
+  }
   #pt-center { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; }
   #pt-table {
+    position: relative;
     width: min(100%, 900px); aspect-ratio: 1 / 1;
+    display: flex; align-items: center; justify-content: center;
     background: url('items/image/牌型测试桌面.png') center / contain no-repeat;
     filter: drop-shadow(0 10px 25px rgba(0,0,0,.25));
+  }
+  #pt-play { display: flex; gap: 16px; align-items: stretch; justify-content: center; width: 100%; padding: 0 20px; }
+  .pt-area {
+    width: 380px; height: 300px; padding: 10px;
+    background: rgba(5,30,22,.8);
+    border: 2px solid rgba(233,196,106,.75); border-radius: 12px;
+    display: flex; flex-direction: column;
+  }
+  .pt-area-title { color: #ffe6a7; font-size: 16px; font-weight: 800; text-align: center; margin-bottom: 6px; }
+  .pt-tiles { flex: 1 1 auto; display: flex; flex-wrap: wrap; gap: 3px; align-content: flex-start; justify-content: center; overflow-y: auto; }
+  .pt-tiles .tile { width: 40px; height: 60px; cursor: pointer; }
+  #pt-hand:empty::before { content: '单击左侧牌加入'; color: #9fc9b1; font-size: 13px; }
+  #pt-melds { flex: 1 1 auto; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+  #pt-melds:empty::before { content: '双击左侧牌选择鸣牌'; color: #9fc9b1; font-size: 13px; text-align: center; }
+  .pt-meld-group {
+    display: flex; align-items: center; gap: 2px; padding: 3px 4px;
+    border: 1px dashed rgba(233,196,106,.55); border-radius: 7px; cursor: pointer;
+  }
+  .pt-meld-group:hover { background: rgba(233,196,106,.12); }
+  .pt-meld-group .tile { width: 40px; height: 60px; }
+  .pt-meld-label { color: #ffe6a7; font-size: 12px; font-weight: 700; margin-right: 2px; }
+  #pt-actions { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; gap: 16px; z-index: 6; }
+  #pt-actions.hidden { display: none; }
+  .pt-win-btn { height: 60px; border: none; background: transparent center / contain no-repeat; cursor: pointer; }
+  .pt-win-btn.ron { width: 140px; background-image: url('items/bottom/GAME/和_普通.svg'); }
+  .pt-win-btn.ron:hover { background-image: url('items/bottom/GAME/和_悬停.svg'); }
+  .pt-win-btn.ron:active { background-image: url('items/bottom/GAME/和_点击.svg'); }
+  .pt-win-btn.tsumo { width: 190px; background-image: url('items/bottom/GAME/自摸_普通.svg'); }
+  .pt-win-btn.tsumo:hover { background-image: url('items/bottom/GAME/自摸_悬停.svg'); }
+  .pt-win-btn.tsumo:active { background-image: url('items/bottom/GAME/自摸_点击.svg'); }
+  #pt-meld-window {
+    position: absolute; inset: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.55);
+  }
+  #pt-meld-window.hidden { display: none; }
+  #pt-meld-panel {
+    width: min(620px, 92%); max-height: 82%; overflow-y: auto;
+    background: #0d2f22; border: 2px solid #e9c46a; border-radius: 14px;
+    padding: 14px 18px; display: flex; flex-direction: column; gap: 10px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.55);
+  }
+  .pt-meld-head { color: #ffe6a7; font-size: 18px; font-weight: 800; text-align: center; }
+  #pt-meld-options { display: flex; flex-direction: column; gap: 8px; }
+  .pt-meld-opt {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(233,196,106,.5);
+    border-radius: 8px; cursor: pointer;
+  }
+  .pt-meld-opt:hover { background: rgba(233,196,106,.16); }
+  .pt-meld-opt .pt-kind { color: #ffe6a7; font-weight: 800; width: 34px; flex: 0 0 auto; }
+  .pt-meld-opt .tile { width: 36px; height: 54px; }
+  #pt-meld-cancel {
+    align-self: center; margin-top: 2px; padding: 6px 22px;
+    background: #b8860b; color: #fff; border: 1px solid #ffd166;
+    border-radius: 8px; font-weight: 700; cursor: pointer;
+  }
+  #pt-win-modal {
+    position: fixed; inset: 0; z-index: 400;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.62);
+  }
+  #pt-win-modal.hidden { display: none; }
+  #pt-win-panel {
+    width: min(980px, 92vw); max-height: 86vh; overflow-y: auto;
+    background: linear-gradient(180deg, #0f3d2a, #082b1e);
+    border: 2px solid #e9c46a; border-radius: 18px;
+    padding: 18px 24px; text-align: center;
+    box-shadow: 0 20px 50px rgba(0,0,0,.65);
+  }
+  #pt-win-title { color: #ffe6a7; font-size: 26px; font-weight: 900; margin-bottom: 6px; }
+  #pt-win-sub { color: #9fc9b1; font-size: 15px; margin-bottom: 12px; }
+  #pt-win-hand { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
+  #pt-win-hand .tile { width: 46px; height: 69px; }
+  #pt-win-melds { display: flex; flex-direction: column; gap: 4px; align-items: center; margin-bottom: 10px; }
+  .pt-win-meld { display: flex; gap: 2px; align-items: center; }
+  .pt-win-meld-label { color: #ffe6a7; font-size: 12px; font-weight: 700; margin-right: 3px; }
+  .pt-win-meld .tile { width: 40px; height: 60px; }
+  #pt-win-close {
+    padding: 7px 26px; background: #b8860b; color: #fff;
+    border: 1px solid #ffd166; border-radius: 9px; font-weight: 700; cursor: pointer;
   }
   #pt-right { width: 360px; flex: 0 0 360px; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
   #pattern-menu-slot { flex: 0 0 auto; }
@@ -1431,7 +1521,29 @@
         <div id="pt-cards"></div>
       </div>
       <div id="pt-center">
-        <div id="pt-table"></div>
+        <div id="pt-table">
+          <div id="pt-play">
+            <div class="pt-area" id="pt-hand-area">
+              <div class="pt-area-title">手牌 <span id="pt-hand-count">0</span></div>
+              <div id="pt-hand" class="pt-tiles"></div>
+            </div>
+            <div class="pt-area" id="pt-meld-area">
+              <div class="pt-area-title">鸣牌区 <span id="pt-meld-count">0</span></div>
+              <div id="pt-melds"></div>
+            </div>
+          </div>
+          <div id="pt-actions" class="hidden">
+            <button class="pt-win-btn ron" id="pt-ron-btn" title="和牌"></button>
+            <button class="pt-win-btn tsumo" id="pt-tsumo-btn" title="自摸"></button>
+          </div>
+          <div id="pt-meld-window" class="hidden">
+            <div id="pt-meld-panel">
+              <div class="pt-meld-head">选择鸣牌方式</div>
+              <div id="pt-meld-options"></div>
+              <button id="pt-meld-cancel">取消</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="pt-right">
         <div id="pattern-menu-slot"></div>
@@ -1441,8 +1553,16 @@
         </div>
       </div>
     </div>
+    <div id="pt-win-modal" class="hidden">
+      <div id="pt-win-panel">
+        <div id="pt-win-title"></div>
+        <div id="pt-win-sub"></div>
+        <div id="pt-win-hand"></div>
+        <div id="pt-win-melds"></div>
+        <button id="pt-win-close">关闭</button>
+      </div>
+    </div>
   </div>
-
   <div id="street-tip" class="hidden"></div>
   <div id="meld-tip" class="hidden"></div>
 
@@ -5186,6 +5306,9 @@ if (typeof window !== 'undefined' && window.addEventListener){
   window.addEventListener('resize', fitPatternStage);
 }
 let patternPaletteBuilt = false;
+let ptTypes = [], ptPaletteEls = {}, ptCounts = {};
+let ptHand = [], ptMelds = [], ptMeldOptions = [], ptTileSeq = 500000, ptClickTimer = null;
+function ptKey(suit, rank){ return suit + '-' + rank; }
 function buildPatternPalette(){
   const host = document.getElementById('pt-cards');
   if (!host || patternPaletteBuilt) return;
@@ -5199,11 +5322,32 @@ function buildPatternPalette(){
     const el = tileEl(t, { small:true });
     el.classList.add('pt-card');
     el.title = tileText(t);
+    el.dataset.key = ptKey(t.suit, t.rank);
+    const cnt = document.createElement('span');
+    cnt.className = 'pt-count';
+    cnt.textContent = '4';
+    el.appendChild(cnt);
     host.appendChild(el);
+    ptPaletteEls[ptKey(t.suit, t.rank)] = el;
+    ptTypes.push({ suit:t.suit, rank:t.rank });
+    el.addEventListener('click', () => {
+      if ((ptCounts[ptKey(t.suit, t.rank)] || 0) <= 0) return;
+      if (ptClickTimer) clearTimeout(ptClickTimer);
+      ptClickTimer = setTimeout(() => {
+        ptClickTimer = null;
+        ptAddToHand({ suit:t.suit, rank:t.rank });
+      }, 240);
+    });
+    el.addEventListener('dblclick', (ev) => {
+      ev.preventDefault();
+      if (ptClickTimer){ clearTimeout(ptClickTimer); ptClickTimer = null; }
+      ptOpenMeld({ suit:t.suit, rank:t.rank });
+    });
   }
 }
 function openPatternTest(){
   buildPatternPalette();
+  ptReset();
   document.getElementById('menu-screen').classList.add('hidden');
   document.getElementById('game-screen').classList.add('hidden');
   document.getElementById('pattern-screen').classList.remove('hidden');
@@ -5211,6 +5355,206 @@ function openPatternTest(){
   const slot = document.getElementById('pattern-menu-slot');
   if (bar && slot && bar.parentElement !== slot) slot.appendChild(bar);
   fitPatternStage();
+}
+
+// ---------------- 牌型测试：手牌 / 鸣牌 / 和牌 ----------------
+function ptCanAddHand(){
+  return ptHand.length + ptMelds.length * 3 < 14;
+}
+function ptCanAddMeld(){
+  return ptMelds.length < 4 && ptHand.length + (ptMelds.length + 1) * 3 <= 14;
+}
+function ptSetHint(text){
+  const note = document.querySelector('#pt-bottom .pt-note');
+  if (note) note.textContent = text;
+}
+function ptAddToHand(type){
+  if (!ptCanAddHand()){ ptSetHint('手牌已满（手牌 + 鸣牌共 14 张）'); return; }
+  const key = ptKey(type.suit, type.rank);
+  if ((ptCounts[key] || 0) <= 0) return;
+  ptCounts[key]--;
+  ptHand.push({ suit:type.suit, rank:type.rank, id:ptTileSeq++ });
+  ptRefresh();
+}
+function ptRemoveHand(id){
+  const i = ptHand.findIndex(t => t.id === id);
+  if (i < 0) return;
+  const t = ptHand.splice(i, 1)[0];
+  ptCounts[ptKey(t.suit, t.rank)] = (ptCounts[ptKey(t.suit, t.rank)] || 0) + 1;
+  ptRefresh();
+}
+function ptRemoveMeld(index){
+  const m = ptMelds.splice(index, 1)[0];
+  if (!m) return;
+  for (const t of m.tiles) ptCounts[ptKey(t.suit, t.rank)] = (ptCounts[ptKey(t.suit, t.rank)] || 0) + 1;
+  ptRefresh();
+}
+function ptSequencesWith(rank){
+  const out = [];
+  for (let s = RANK_MIN; s <= RANK_SEQ_MAX - 2; s++){
+    const seq = [s, s + 1, s + 2];
+    if (seq.includes(rank)) out.push(seq);
+  }
+  if ([RANK_MAX, 2, 3].includes(rank)) out.push([RANK_MAX, 2, 3]);
+  return out;
+}
+function ptBuildMeldOptions(type){
+  const opts = [];
+  const available = (tiles) => {
+    const need = {};
+    for (const t of tiles){ const k = ptKey(t.suit, t.rank); need[k] = (need[k] || 0) + 1; }
+    return Object.entries(need).every(([k, n]) => (ptCounts[k] || 0) >= n);
+  };
+  if (isJoker(type)){
+    const combos = [
+      ['碰', ['R','R','R']], ['碰', ['R','R','Y']], ['碰', ['R','Y','Y']], ['碰', ['Y','Y','Y']],
+      ['杠', ['R','R','R','R']], ['杠', ['R','R','R','Y']], ['杠', ['R','R','Y','Y']], ['杠', ['R','Y','Y','Y']], ['杠', ['Y','Y','Y','Y']],
+    ];
+    for (const [kind, suits] of combos){
+      if (!suits.includes(type.suit)) continue;
+      const tiles = suits.map(s => ({ suit:s, rank:0 }));
+      if (available(tiles)) opts.push({ kind, tiles });
+    }
+  } else {
+    const k = ptKey(type.suit, type.rank);
+    const n = ptCounts[k] || 0;
+    if (n >= 3) opts.push({ kind:'碰', tiles:[{ suit:type.suit, rank:type.rank }, { suit:type.suit, rank:type.rank }, { suit:type.suit, rank:type.rank }] });
+    if (n >= 4) opts.push({ kind:'杠', tiles:[{ suit:type.suit, rank:type.rank }, { suit:type.suit, rank:type.rank }, { suit:type.suit, rank:type.rank }, { suit:type.suit, rank:type.rank }] });
+    if (isNumberRank(type.rank) || type.rank === RANK_MAX){
+      for (const seq of ptSequencesWith(type.rank)){
+        const tiles = seq.map(r => ({ suit:type.suit, rank:r }));
+        if (available(tiles)) opts.push({ kind:'吃', tiles });
+      }
+    }
+  }
+  return opts;
+}
+function ptOpenMeld(type){
+  if (!ptCanAddMeld()){
+    ptSetHint('已达到 14 张或已有 4 组鸣牌，不能再鸣牌');
+    return;
+  }
+  const opts = ptBuildMeldOptions(type);
+  const host = document.getElementById('pt-meld-options');
+  if (!host) return;
+  host.innerHTML = '';
+  if (!opts.length){
+    const empty = document.createElement('div');
+    empty.className = 'pt-meld-head';
+    empty.textContent = '没有可鸣的牌型（剩余牌数不足）';
+    host.appendChild(empty);
+  } else {
+    for (const opt of opts){
+      const b = document.createElement('button');
+      b.className = 'pt-meld-opt';
+      const kd = document.createElement('span');
+      kd.className = 'pt-kind';
+      kd.textContent = opt.kind;
+      b.appendChild(kd);
+      for (const t of opt.tiles) b.appendChild(tileEl(t, { small:true }));
+      b.addEventListener('click', () => ptAddMeld(opt));
+      host.appendChild(b);
+    }
+  }
+  document.getElementById('pt-meld-window').classList.remove('hidden');
+}
+function ptAddMeld(opt){
+  if (!ptCanAddMeld()) return;
+  const need = {};
+  for (const t of opt.tiles){ const k = ptKey(t.suit, t.rank); need[k] = (need[k] || 0) + 1; }
+  if (!Object.entries(need).every(([k, n]) => (ptCounts[k] || 0) >= n)) return;
+  for (const [k, n] of Object.entries(need)) ptCounts[k] -= n;
+  ptMelds.push({ kind:opt.kind, tiles:opt.tiles.map(t => ({ suit:t.suit, rank:t.rank, id:ptTileSeq++ })) });
+  ptCloseMeldWindow();
+  ptRefresh();
+}
+function ptCloseMeldWindow(){
+  document.getElementById('pt-meld-window').classList.add('hidden');
+}
+function ptRefresh(){
+  const handEl = document.getElementById('pt-hand');
+  if (handEl){
+    handEl.innerHTML = '';
+    for (const t of patternSortTiles(ptHand.slice())){
+      const el = tileEl(t, { small:true });
+      el.dataset.id = t.id;
+      handEl.appendChild(el);
+    }
+  }
+  const meldsEl = document.getElementById('pt-melds');
+  if (meldsEl){
+    meldsEl.innerHTML = '';
+    ptMelds.forEach((m, idx) => {
+      const g = document.createElement('div');
+      g.className = 'pt-meld-group';
+      g.dataset.index = idx;
+      const lab = document.createElement('span');
+      lab.className = 'pt-meld-label';
+      lab.textContent = m.kind;
+      g.appendChild(lab);
+      for (const t of m.tiles) g.appendChild(tileEl(t, { small:true }));
+      meldsEl.appendChild(g);
+    });
+  }
+  const hc = document.getElementById('pt-hand-count');
+  if (hc) hc.textContent = ptHand.length;
+  const mc = document.getElementById('pt-meld-count');
+  if (mc) mc.textContent = ptMelds.length;
+  for (const key of Object.keys(ptPaletteEls)){
+    const el = ptPaletteEls[key];
+    const n = ptCounts[key] || 0;
+    const badge = el.querySelector ? el.querySelector('.pt-count') : null;
+    if (badge) badge.textContent = n;
+    el.classList.toggle('pt-empty', n <= 0);
+  }
+  ptUpdateActions();
+}
+function ptUpdateActions(){
+  const total = ptHand.length + ptMelds.length * 3;
+  const ready = total === 14 && canWin(ptHand, ptMelds.length, false, true);
+  const acts = document.getElementById('pt-actions');
+  if (acts) acts.classList.toggle('hidden', !ready);
+}
+function ptShowWin(tsumo){
+  const total = ptHand.length + ptMelds.length * 3;
+  if (total !== 14 || !canWin(ptHand, ptMelds.length, false, true)) return;
+  const title = document.getElementById('pt-win-title');
+  if (title) title.textContent = tsumo ? '🎉 自摸和牌！' : '🎉 和牌成功！';
+  const sub = document.getElementById('pt-win-sub');
+  if (sub) sub.textContent = '和牌类型：标准型（4 面子 + 1 将） · ' + (tsumo ? '自摸' : '和牌') + ' · 手牌 ' + ptHand.length + ' 张 / 鸣牌 ' + ptMelds.length + ' 组';
+  const handEl = document.getElementById('pt-win-hand');
+  if (handEl){
+    handEl.innerHTML = '';
+    for (const t of patternSortTiles(ptHand.slice())) handEl.appendChild(tileEl(t, {}));
+  }
+  const meldsEl = document.getElementById('pt-win-melds');
+  if (meldsEl){
+    meldsEl.innerHTML = '';
+    for (const m of ptMelds){
+      const row = document.createElement('div');
+      row.className = 'pt-win-meld';
+      const lab = document.createElement('span');
+      lab.className = 'pt-win-meld-label';
+      lab.textContent = m.kind;
+      row.appendChild(lab);
+      for (const t of m.tiles) row.appendChild(tileEl(t, {}));
+      meldsEl.appendChild(row);
+    }
+  }
+  document.getElementById('pt-win-modal').classList.remove('hidden');
+}
+function ptHideWin(){
+  document.getElementById('pt-win-modal').classList.add('hidden');
+}
+function ptReset(){
+  if (ptClickTimer){ clearTimeout(ptClickTimer); ptClickTimer = null; }
+  ptHand = []; ptMelds = [];
+  ptCounts = {};
+  for (const t of ptTypes) ptCounts[ptKey(t.suit, t.rank)] = 4;
+  ptCloseMeldWindow();
+  ptHideWin();
+  ptSetHint('单击左侧牌加入手牌；双击左侧牌选择鸣牌；双击手牌或鸣牌组退回');
+  ptRefresh();
 }
 function enterSingleGame(){
   document.getElementById('menu-screen').classList.add('hidden');
@@ -5222,6 +5566,8 @@ function enterSingleGame(){
 function backToMenu(){
   const ps = document.getElementById('pattern-screen');
   if (ps && !ps.classList.contains('hidden')){
+    ptCloseMeldWindow();
+    ptHideWin();
     ps.classList.add('hidden');
     const bar = document.getElementById('menu-bar');
     const col = document.getElementById('col-right');
@@ -5241,10 +5587,23 @@ document.getElementById('restart').addEventListener('click', (e) => {
   if (ps && !ps.classList.contains('hidden')){
     e.stopImmediatePropagation();
     e.preventDefault();
-    const note = document.querySelector('#pt-bottom .pt-note');
-    if (note) note.textContent = '测试区已重置（功能预留）';
+    ptReset();
   }
 }, true);
+document.getElementById('pt-hand').addEventListener('dblclick', (e) => {
+  const el = e.target && e.target.closest ? e.target.closest('.tile') : null;
+  if (!el) return;
+  ptRemoveHand(Number(el.dataset.id));
+});
+document.getElementById('pt-melds').addEventListener('dblclick', (e) => {
+  const g = e.target && e.target.closest ? e.target.closest('.pt-meld-group') : null;
+  if (!g) return;
+  ptRemoveMeld(Number(g.dataset.index));
+});
+document.getElementById('pt-ron-btn').addEventListener('click', () => ptShowWin(false));
+document.getElementById('pt-tsumo-btn').addEventListener('click', () => ptShowWin(true));
+document.getElementById('pt-meld-cancel').addEventListener('click', ptCloseMeldWindow);
+document.getElementById('pt-win-close').addEventListener('click', ptHideWin);
 
 // 暴露给自动化测试 / 调试（不影响正常游玩）
 window.__game = {
@@ -5253,6 +5612,8 @@ window.__game = {
   toggleSwapPick, confirmSwap, finishSwapForHuman, aiSwap, finishSwapPhase, tickSwap,
   toggleReady, inspectReady,
   getInspect(){ return inspectResult ? { ...inspectResult } : null; },
+  openPatternTest, ptAddToHand, ptOpenMeld, ptAddMeld, ptRemoveHand, ptRemoveMeld, ptReset, ptShowWin,
+  getPatternState(){ return { hand: ptHand.slice(), melds: ptMelds.map(m => ({ kind:m.kind, tiles:m.tiles.slice() })), counts: { ...ptCounts } }; },
   getSwap(){ return { active: swapActive, humanDone: swapHumanDone, remaining: swapRemaining, selected: [...swapSelected], done: swapDone.slice() }; },
   setSwapEnabled(v){ swapEnabled = !!v; },
   setDoraEnabled(v){ doraEnabled = !!v; },
