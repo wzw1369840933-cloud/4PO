@@ -228,6 +228,22 @@
     padding: 7px 26px; background: #b8860b; color: #fff;
     border: 1px solid #ffd166; border-radius: 9px; font-weight: 700; cursor: pointer;
   }
+  #pt-win-patterns { display: flex; flex-direction: column; gap: 6px; margin: 0 auto 10px; max-width: 820px; }
+  .pt-pattern-row {
+    display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+    background: rgba(255,255,255,.05); border: 1px solid rgba(233,196,106,.4);
+    border-radius: 8px; text-align: left;
+  }
+  .pt-pattern-info { flex: 1 1 auto; min-width: 0; }
+  .pt-pattern-name { color: #ffe6a7; font-weight: 800; font-size: 14px; }
+  .pt-pattern-bonus { color: #ffb86b; font-size: 13px; margin-left: 6px; }
+  .pt-pattern-desc { color: #9fc9b1; font-size: 12px; margin-top: 2px; }
+  .pt-pattern-state { color: #9fc9b1; font-size: 12px; white-space: nowrap; }
+  .pt-pattern-enable {
+    padding: 4px 10px; background: #b8860b; color: #fff;
+    border: 1px solid #ffd166; border-radius: 6px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+  #pt-win-patterns .pt-pattern-none { color: #9fc9b1; font-size: 13px; }
   #pt-right { width: 360px; flex: 0 0 360px; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
   #pattern-menu-slot { flex: 0 0 auto; }
   #pattern-menu-slot #menu-bar { width: 100%; flex: 0 0 auto; }
@@ -462,6 +478,39 @@
     z-index: 100;
   }
   #rules-overlay.hidden { display: none; }
+  #win-pattern-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,.65);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #win-pattern-overlay.hidden { display: none; }
+  #win-pattern-modal {
+    width: min(820px, 92vw); max-height: 84vh;
+    display: flex; flex-direction: column; overflow: hidden;
+    background: linear-gradient(180deg, #0f3d2a, #082b1e);
+    border: 2px solid #e9c46a; border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.6);
+  }
+  #win-pattern-modal .rules-head { padding: 12px 18px; font-size: 18px; color: #ffe6a7; border-bottom: 1px solid #1d4a36; }
+  #win-pattern-close {
+    background: transparent; border: none; color: #cfe7d6;
+    font-size: 18px; cursor: pointer; padding: 2px 8px;
+  }
+  #win-pattern-close:hover { color: #fff; }
+  #win-pattern-list { padding: 12px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  #win-pattern-list .win-pattern-empty { color: #9fc9b1; font-size: 14px; text-align: center; padding: 18px 0; }
+  .win-pattern-item {
+    border: 1px solid rgba(233,196,106,.45); border-radius: 10px;
+    padding: 8px 12px; background: rgba(255,255,255,.05);
+  }
+  .win-pattern-item-top { display: flex; align-items: center; gap: 10px; }
+  .win-pattern-name { color: #ffe6a7; font-weight: 800; font-size: 17px; }
+  .win-pattern-bonus { color: #ffb86b; font-weight: 700; font-size: 14px; }
+  .win-pattern-state { margin-left: auto; font-size: 12px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .win-pattern-state.on { background: #1f7a4d; color: #fff; }
+  .win-pattern-state.off { background: rgba(255,255,255,.12); color: #9fc9b1; }
+  .win-pattern-desc { color: #b7d6c5; font-size: 13px; margin-top: 4px; line-height: 1.4; }
+  #win-pattern-foot { padding: 10px 18px; border-top: 1px solid #1d4a36; color: #9fc9b1; font-size: 12px; text-align: center; }
   #rules-modal {
     width: min(680px, 92vw);
     max-height: 84vh;
@@ -1567,12 +1616,24 @@
         <div id="pt-win-sub"></div>
         <div id="pt-win-hand"></div>
         <div id="pt-win-melds"></div>
+        <div id="pt-win-patterns"></div>
         <button id="pt-win-close">关闭</button>
       </div>
     </div>
   </div>
   <div id="street-tip" class="hidden"></div>
   <div id="meld-tip" class="hidden"></div>
+
+  <div id="win-pattern-overlay" class="hidden">
+    <div id="win-pattern-modal">
+      <div class="rules-head">
+        <span>和牌牌型</span>
+        <button id="win-pattern-close">✕</button>
+      </div>
+      <div id="win-pattern-list"></div>
+      <div id="win-pattern-foot">在「牌型测试」中和牌匹配后启用；启用后正式对局结算生效。</div>
+    </div>
+  </div>
 
   <div id="rules-overlay" class="hidden">
     <div id="rules-modal">
@@ -2596,6 +2657,168 @@ function calcDoraPct(hand, melds){
   }
   return { pct, parts, excluded: [...excluded] };
 }
+
+// ================== 和牌牌型注册表（框架） ==================
+// 后续导入的牌型统一写在这里；牌型测试、正式对局、菜单「和牌牌型」共用同一份定义。
+// 结构：
+// registerWinPattern({
+//   id:'unique_id', name:'牌型名', desc:'说明',
+//   bonusPct: 50,          // 按基础分的百分比加成（与王牌/宝牌同一乘区）
+//   bonusPoints: 0,        // 结算后再加的固定分
+//   group: '',             // 同一 group 内只取加成最高的一项（用于互斥牌型）
+//   enabledByDefault: false,
+//   evaluate(ctx){ return true/false; }  // ctx 见 buildPatternContext
+// });
+const WIN_PATTERNS = [];
+const WIN_PATTERN_STORAGE_KEY = '4po_win_patterns_enabled_v1';
+const winPatternSaved = new Set();
+let winPatternEnabled = new Set();
+(function loadWinPatternState(){
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const raw = localStorage.getItem(WIN_PATTERN_STORAGE_KEY);
+    if (!raw) return;
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) for (const id of arr) if (typeof id === 'string') winPatternSaved.add(id);
+  } catch (e) {}
+})();
+function saveWinPatternState(){
+  try {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(WIN_PATTERN_STORAGE_KEY, JSON.stringify([...winPatternEnabled]));
+  } catch (e) {}
+}
+function registerWinPattern(def){
+  if (!def || !def.id || !def.name || typeof def.evaluate !== 'function') return null;
+  if (WIN_PATTERNS.some(p => p.id === def.id)) return null;
+  const p = {
+    id: String(def.id),
+    name: String(def.name),
+    desc: def.desc ? String(def.desc) : '',
+    bonusPct: Number(def.bonusPct) || 0,
+    bonusPoints: Number(def.bonusPoints) || 0,
+    group: def.group ? String(def.group) : '',
+    enabledByDefault: !!def.enabledByDefault,
+    system: !!def.system,
+    evaluate: def.evaluate,
+  };
+  WIN_PATTERNS.push(p);
+  if (p.enabledByDefault || winPatternSaved.has(p.id)) winPatternEnabled.add(p.id);
+  return p;
+}
+function getWinPattern(id){ return WIN_PATTERNS.find(p => p.id === id) || null; }
+function isWinPatternEnabled(id){ return winPatternEnabled.has(id); }
+function enableWinPattern(id){
+  if (!getWinPattern(id)) return false;
+  winPatternEnabled.add(id);
+  saveWinPatternState();
+  if (typeof renderWinPatternList === 'function') renderWinPatternList();
+  return true;
+}
+function disableWinPattern(id){
+  if (!winPatternEnabled.delete(id)) return false;
+  saveWinPatternState();
+  if (typeof renderWinPatternList === 'function') renderWinPatternList();
+  return true;
+}
+function winPatternBonusText(p){
+  const parts = [];
+  if (p.bonusPct) parts.push((p.bonusPct > 0 ? '+' : '') + p.bonusPct + '%');
+  if (p.bonusPoints) parts.push((p.bonusPoints > 0 ? '+' : '') + p.bonusPoints + '分');
+  return parts.length ? parts.join(' + ') : '基础牌型';
+}
+function normalizePatternMeld(m){
+  if (!m) return { type:'pong', tiles:[], sub:false, concealed:false, how:'' };
+  const tiles = (m.tiles || []).slice();
+  let type = m.type;
+  if (!type){
+    const kind = String(m.kind || '');
+    type = kind.includes('杠') ? 'kong' : (kind.includes('吃') ? 'chi' : 'pong');
+  }
+  return {
+    type,
+    tiles,
+    sub: m.sub != null ? !!m.sub : (typeof hasSubstitution === 'function' ? hasSubstitution(tiles) : false),
+    concealed: !!m.concealed || m.how === 'ankan',
+    how: m.how || '',
+  };
+}
+function buildPatternContext(hand, melds, opts){
+  opts = opts || {};
+  const meldList = (melds || []).map(normalizePatternMeld);
+  const handTiles = (hand || []).slice();
+  const allTiles = handTiles.slice();
+  for (const m of meldList) allTiles.push(...m.tiles);
+  const seat = Number.isFinite(opts.seat) ? opts.seat : 0;
+  const dealerSeat = Number.isFinite(opts.dealerSeat) ? opts.dealerSeat : 0;
+  return {
+    hand: handTiles,
+    melds: meldList,
+    allTiles,
+    winTile: opts.winTile || null,
+    isTsumo: !!opts.isTsumo,
+    isRon: !opts.isTsumo,
+    seat,
+    dealerSeat,
+    isDealer: seat === dealerSeat,
+    playerCount: PLAYER_COUNT,
+    jokerCount: allTiles.filter(isJoker).length,
+    normalTiles: allTiles.filter(t => !isJoker(t)),
+    concealed: meldList.every(m => m.concealed),
+    riichi: !!opts.riichi,
+    roundNo: opts.roundNo,
+    handNo: opts.handNo,
+  };
+}
+function matchWinPatterns(ctx){
+  const hits = [];
+  for (const p of WIN_PATTERNS){
+    let ok = false;
+    try { ok = !!p.evaluate(ctx); } catch (e) { console.warn('牌型判定出错', p.id, e); }
+    if (ok) hits.push({ def:p, enabled:isWinPatternEnabled(p.id) });
+  }
+  return hits;
+}
+function selectWinPatterns(hits){
+  const chosen = [];
+  const groups = new Map();
+  for (const h of hits){
+    if (!h.enabled) continue;
+    if (!h.def.group){ chosen.push(h); continue; }
+    const prev = groups.get(h.def.group);
+    if (!prev || h.def.bonusPct > prev.def.bonusPct || (h.def.bonusPct === prev.def.bonusPct && h.def.bonusPoints > prev.def.bonusPoints)) groups.set(h.def.group, h);
+  }
+  chosen.push(...groups.values());
+  chosen.sort((a, b) => (b.def.bonusPct - a.def.bonusPct) || (b.def.bonusPoints - a.def.bonusPoints) || a.def.name.localeCompare(b.def.name, 'zh'));
+  return chosen;
+}
+function sumWinPatterns(hits){
+  let pct = 0, points = 0;
+  for (const h of hits || []){
+    pct += h.def.bonusPct || 0;
+    points += h.def.bonusPoints || 0;
+  }
+  return { pct, points };
+}
+const WinPatternUtil = {
+  isJoker, suitColor, tileText,
+  normalTiles(ctx){ return (ctx.allTiles || []).filter(t => !isJoker(t)); },
+  suits(ctx){ return new Set(this.normalTiles(ctx).map(t => t.suit)); },
+  colors(ctx){ return new Set(this.normalTiles(ctx).map(t => suitColor(t.suit))); },
+  allSameSuit(ctx){ return this.suits(ctx).size <= 1; },   // 王牌视为任意花色
+  allSameColor(ctx){ return this.colors(ctx).size <= 1; },
+  hasRank(ctx, rank){ return this.normalTiles(ctx).some(t => t.rank === rank); },
+  countRank(ctx, rank){ return this.normalTiles(ctx).filter(t => t.rank === rank).length; },
+  meldTypes(ctx){ return (ctx.melds || []).map(m => m.type); },
+  allMeldsTriplets(ctx){ return (ctx.melds || []).every(m => m.type === 'pong' || m.type === 'kong'); },
+  hasHonorTiles(ctx){ return this.normalTiles(ctx).some(t => t.rank >= 11 && t.rank <= 13); },
+};
+// 后续示例：
+// registerWinPattern({
+//   id:'example_flush', name:'示例·清一色', desc:'全部牌同一花色',
+//   bonusPct:50, bonusPoints:0,
+//   evaluate(ctx){ return WinPatternUtil.allSameSuit(ctx); },
+// });
 
 // ---------------- 开局换牌（调） ----------------
 function stopSwapTimer(){
@@ -3700,16 +3923,24 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
   revealDoraYin();
   const winHand = p.hand.slice();
   if (winTile && !winHand.some(t => t.id === winTile.id)) winHand.push(winTile);
-  // 宝牌 + 王牌加成：结算总分 ×(1 + 总百分比)
+  // 宝牌 + 王牌 + 和牌牌型加成：结算总分 ×(1 + 总百分比) + 牌型固定分
   const jokerBonus = calcJokerBonus(winHand, p.melds);
   const doraBonus = calcDoraPct(winHand, p.melds);
-  const totalPct = jokerBonus.pct + doraBonus.pct;
+  const patternCtx = buildPatternContext(winHand, p.melds, {
+    winTile, isTsumo, seat, dealerSeat,
+    riichi: !!p.riichi, roundNo, handNo,
+  });
+  const patternHits = selectWinPatterns(matchWinPatterns(patternCtx));
+  const patternSum = sumWinPatterns(patternHits);
+  const totalPct = jokerBonus.pct + doraBonus.pct + patternSum.pct;
   const baseScore = isTsumo ? 8 : 4;
-  const score = Math.round(baseScore * (1 + totalPct / 100));
+  const score = Math.round(baseScore * (1 + totalPct / 100)) + patternSum.points;
   const winName = isTsumo ? '自摸' : (discarderSeat!=null ? ('荣和（'+players[discarderSeat].name+' 放铳）') : '荣和');
   const tileTxt = winTile ? ('和牌张 ' + tileText(winTile) + '，') : '';
+  const patternNames = patternHits.map(h => h.def.name + ' ' + winPatternBonusText(h.def)).join('　');
   const bonusTxt = (jokerBonus.pct > 0 ? ('王牌加成 +' + jokerBonus.pct + '%，') : '')
-                 + (doraBonus.pct > 0 ? ('宝牌加成 +' + doraBonus.pct + '%，') : '');
+                 + (doraBonus.pct > 0 ? ('宝牌加成 +' + doraBonus.pct + '%，') : '')
+                 + (patternHits.length && (patternSum.pct || patternSum.points) ? ('牌型加成 ' + (patternSum.pct ? '+' + patternSum.pct + '%' : '') + (patternSum.points ? (patternSum.pct ? ' +' : '+') + patternSum.points + '分' : '') + '（' + patternNames + '），') : '');
   log('🎉 ' + p.name + ' ' + winName + ' 和牌！' + tileTxt + bonusTxt + '得分 +' + score, true);
   if (isTsumo){
     for (let i=0;i<PLAYER_COUNT;i++) if (i!==seat) log(players[i].name + ' 支付 ' + score + ' 分给 ' + p.name + '（MVP 简化计分）');
@@ -3737,6 +3968,9 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
     jokerParts: (jokerBonus.parts || []).slice(),
     doraPct: doraBonus.pct,
     doraParts: (doraBonus.parts || []).slice(),
+    patternPct: patternSum.pct,
+    patternPoints: patternSum.points,
+    patterns: patternHits.map(h => ({ id:h.def.id, name:h.def.name, desc:h.def.desc, bonusPct:h.def.bonusPct, bonusPoints:h.def.bonusPoints })),
     hand: p.hand.slice(),
     melds: p.melds.map(m => ({ type: m.type, sub: !!m.sub, how: m.how || 'minkan', tiles: m.tiles.slice() })),
   };
@@ -4660,6 +4894,15 @@ function renderWinModal(){
       db.textContent = '宝牌加成 +' + info.doraPct + '%　（' + names + '）';
       panel.appendChild(db);
     }
+    if (info.patterns && info.patterns.length && (info.patternPct || info.patternPoints)){
+      const pb = document.createElement('div');
+      pb.className = 'win-joker-bonus';
+      const pctTxt = info.patternPct ? '+' + info.patternPct + '%' : '';
+      const ptTxt = info.patternPoints ? (pctTxt ? ' +' : '+') + info.patternPoints + '分' : '';
+      const names = info.patterns.map(p => p.name + ' ' + winPatternBonusText(p)).join('　');
+      pb.textContent = '牌型加成 ' + pctTxt + ptTxt + '　（' + names + '）';
+      panel.appendChild(pb);
+    }
     // 手牌：型排列，关键张独立在最右
     const handRow = document.createElement('div');
     handRow.id = 'win-hand';
@@ -5157,10 +5400,16 @@ function renderKongDemos(){
 }
 // 和牌牌型：暂未开放，先给出提示（后续可接独立的牌型一览面板）
 document.getElementById('pattern-btn').addEventListener('click', () => {
-  showMenuToast('和牌牌型一览暂未开放');
+  openWinPatternList();
 });
 document.getElementById('rules-close').addEventListener('click', () => {
   document.getElementById('rules-overlay').classList.add('hidden');
+});
+document.getElementById('win-pattern-close').addEventListener('click', () => {
+  document.getElementById('win-pattern-overlay').classList.add('hidden');
+});
+document.getElementById('win-pattern-overlay').addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'win-pattern-overlay') document.getElementById('win-pattern-overlay').classList.add('hidden');
 });
 document.getElementById('rules-overlay').addEventListener('click', (e) => {
   if (e.target.id === 'rules-overlay') e.currentTarget.classList.add('hidden');
@@ -5316,6 +5565,7 @@ if (typeof window !== 'undefined' && window.addEventListener){
 let patternPaletteBuilt = false;
 let ptTypes = [], ptPaletteEls = {}, ptCounts = {};
 let ptHand = [], ptMelds = [], ptMeldOptions = [], ptTileSeq = 500000, ptClickTimer = null;
+let ptLastHandTileId = null, ptLastWinCtx = null;
 function ptKey(suit, rank){ return suit + '-' + rank; }
 function ptTileWrap(t, opts){
   const wrap = document.createElement('div');
@@ -5375,6 +5625,49 @@ function openPatternTest(){
   if (bar && slot && bar.parentElement !== slot) slot.appendChild(bar);
   fitPatternStage();
 }
+function renderWinPatternList(){
+  const host = document.getElementById('win-pattern-list');
+  if (!host) return;
+  host.innerHTML = '';
+  if (!WIN_PATTERNS.length){
+    const empty = document.createElement('div');
+    empty.className = 'win-pattern-empty';
+    empty.textContent = '暂无已登记的和牌牌型。后续导入牌型后，会在这里显示，并在牌型测试中启用。';
+    host.appendChild(empty);
+    return;
+  }
+  for (const p of WIN_PATTERNS){
+    const item = document.createElement('div');
+    item.className = 'win-pattern-item';
+    const top = document.createElement('div');
+    top.className = 'win-pattern-item-top';
+    const name = document.createElement('span');
+    name.className = 'win-pattern-name';
+    name.textContent = p.name;
+    const bonus = document.createElement('span');
+    bonus.className = 'win-pattern-bonus';
+    bonus.textContent = winPatternBonusText(p);
+    const state = document.createElement('span');
+    state.className = 'win-pattern-state ' + (isWinPatternEnabled(p.id) ? 'on' : 'off');
+    state.textContent = isWinPatternEnabled(p.id) ? '已启用（正式对局生效）' : '待测试启用';
+    top.appendChild(name);
+    top.appendChild(bonus);
+    top.appendChild(state);
+    item.appendChild(top);
+    if (p.desc){
+      const desc = document.createElement('div');
+      desc.className = 'win-pattern-desc';
+      desc.textContent = p.desc;
+      item.appendChild(desc);
+    }
+    host.appendChild(item);
+  }
+}
+function openWinPatternList(){
+  renderWinPatternList();
+  const el = document.getElementById('win-pattern-overlay');
+  if (el) el.classList.remove('hidden');
+}
 
 // ---------------- 牌型测试：手牌 / 鸣牌 / 和牌 ----------------
 function ptCanAddHand(){
@@ -5392,13 +5685,16 @@ function ptAddToHand(type){
   const key = ptKey(type.suit, type.rank);
   if ((ptCounts[key] || 0) <= 0) return;
   ptCounts[key]--;
-  ptHand.push({ suit:type.suit, rank:type.rank, id:ptTileSeq++ });
+  const tile = { suit:type.suit, rank:type.rank, id:ptTileSeq++ };
+  ptHand.push(tile);
+  ptLastHandTileId = tile.id;
   ptRefresh();
 }
 function ptRemoveHand(id){
   const i = ptHand.findIndex(t => t.id === id);
   if (i < 0) return;
   const t = ptHand.splice(i, 1)[0];
+  if (ptLastHandTileId === t.id) ptLastHandTileId = null;
   ptCounts[ptKey(t.suit, t.rank)] = (ptCounts[ptKey(t.suit, t.rank)] || 0) + 1;
   ptRefresh();
 }
@@ -5583,7 +5879,59 @@ function ptShowWin(tsumo){
       meldsEl.appendChild(row);
     }
   }
+  const winTile = ptHand.find(t => t.id === ptLastHandTileId) || null;
+  ptLastWinCtx = buildPatternContext(ptHand, ptMelds, { winTile, isTsumo:tsumo, seat:0, dealerSeat:0 });
+  renderPtWinPatterns(matchWinPatterns(ptLastWinCtx));
   document.getElementById('pt-win-modal').classList.remove('hidden');
+}
+function renderPtWinPatterns(hits){
+  const host = document.getElementById('pt-win-patterns');
+  if (!host) return;
+  host.innerHTML = '';
+  if (!hits || !hits.length){
+    const none = document.createElement('div');
+    none.className = 'pt-pattern-none';
+    none.textContent = '暂无匹配的和牌牌型（等待导入）';
+    host.appendChild(none);
+    return;
+  }
+  for (const h of hits){
+    const row = document.createElement('div');
+    row.className = 'pt-pattern-row';
+    const info = document.createElement('div');
+    info.className = 'pt-pattern-info';
+    const name = document.createElement('span');
+    name.className = 'pt-pattern-name';
+    name.textContent = h.def.name;
+    const bonus = document.createElement('span');
+    bonus.className = 'pt-pattern-bonus';
+    bonus.textContent = winPatternBonusText(h.def);
+    info.appendChild(name);
+    info.appendChild(bonus);
+    if (h.def.desc){
+      const desc = document.createElement('div');
+      desc.className = 'pt-pattern-desc';
+      desc.textContent = h.def.desc;
+      info.appendChild(desc);
+    }
+    row.appendChild(info);
+    if (h.enabled){
+      const st = document.createElement('span');
+      st.className = 'pt-pattern-state';
+      st.textContent = '已启用';
+      row.appendChild(st);
+    } else {
+      const btn = document.createElement('button');
+      btn.className = 'pt-pattern-enable';
+      btn.textContent = '测试通过 · 启用';
+      btn.addEventListener('click', () => {
+        enableWinPattern(h.def.id);
+        if (ptLastWinCtx) renderPtWinPatterns(matchWinPatterns(ptLastWinCtx));
+      });
+      row.appendChild(btn);
+    }
+    host.appendChild(row);
+  }
 }
 function ptHideWin(){
   document.getElementById('pt-win-modal').classList.add('hidden');
@@ -5591,6 +5939,7 @@ function ptHideWin(){
 function ptReset(){
   if (ptClickTimer){ clearTimeout(ptClickTimer); ptClickTimer = null; }
   ptHand = []; ptMelds = [];
+  ptLastHandTileId = null; ptLastWinCtx = null;
   ptCounts = {};
   for (const t of ptTypes) ptCounts[ptKey(t.suit, t.rank)] = 4;
   ptCloseMeldWindow();
@@ -5656,6 +6005,11 @@ window.__game = {
   getInspect(){ return inspectResult ? { ...inspectResult } : null; },
   openPatternTest, ptAddToHand, ptOpenMeld, ptAddMeld, ptRemoveHand, ptRemoveMeld, ptReset, ptShowWin,
   getPatternState(){ return { hand: ptHand.slice(), melds: ptMelds.map(m => ({ kind:m.kind, tiles:m.tiles.slice() })), counts: { ...ptCounts } }; },
+  registerWinPattern, getWinPattern, getWinPatterns(){ return WIN_PATTERNS.slice(); },
+  matchWinPatterns, selectWinPatterns, sumWinPatterns, buildPatternContext,
+  enableWinPattern, disableWinPattern, isWinPatternEnabled, winPatternBonusText,
+  openWinPatternList, renderWinPatternList, WinPatternUtil,
+  getWinInfo(){ return winInfo; },
   getSwap(){ return { active: swapActive, humanDone: swapHumanDone, remaining: swapRemaining, selected: [...swapSelected], done: swapDone.slice() }; },
   setSwapEnabled(v){ swapEnabled = !!v; },
   setDoraEnabled(v){ doraEnabled = !!v; },
