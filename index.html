@@ -139,27 +139,22 @@
     background: url('items/image/牌型测试桌面.png') center / contain no-repeat;
     filter: drop-shadow(0 10px 25px rgba(0,0,0,.25));
   }
-  #pt-play { display: flex; gap: 16px; align-items: stretch; justify-content: center; width: 100%; padding: 0 20px; }
-  .pt-area {
-    width: 380px; height: 300px; padding: 10px;
-    background: rgba(5,30,22,.8);
-    border: 2px solid rgba(233,196,106,.75); border-radius: 12px;
-    display: flex; flex-direction: column;
-  }
-  .pt-area-title { color: #ffe6a7; font-size: 16px; font-weight: 800; text-align: center; margin-bottom: 6px; }
-  .pt-tiles { flex: 1 1 auto; display: flex; flex-wrap: wrap; gap: 3px; align-content: flex-start; justify-content: center; overflow-y: auto; }
-  .pt-tiles .tile { width: 40px; height: 60px; cursor: pointer; }
+  #pt-play { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 100%; padding: 0 12px; }
+  .pt-line { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .pt-line-title { color: #ffe6a7; font-size: 15px; font-weight: 700; text-align: center; margin-bottom: 1px; text-shadow: 0 1px 2px #000; }
+  .pt-tiles { display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 2px; min-height: 62px; }
+  .pt-tiles .tile { width: 40px; height: 60px; flex: 0 0 auto; cursor: pointer; }
   #pt-hand:empty::before { content: '单击左侧牌加入'; color: #9fc9b1; font-size: 13px; }
-  #pt-melds { flex: 1 1 auto; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+  #pt-melds { display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 12px; min-height: 62px; }
   #pt-melds:empty::before { content: '双击左侧牌选择鸣牌'; color: #9fc9b1; font-size: 13px; text-align: center; }
   .pt-meld-group {
-    display: flex; align-items: center; gap: 2px; padding: 3px 4px;
-    border: 1px dashed rgba(233,196,106,.55); border-radius: 7px; cursor: pointer;
+    display: flex; align-items: center; gap: 2px; padding: 1px 2px;
+    cursor: pointer; flex: 0 0 auto;
   }
-  .pt-meld-group:hover { background: rgba(233,196,106,.12); }
-  .pt-meld-group .tile { width: 40px; height: 60px; }
+  .pt-meld-group:hover { background: rgba(233,196,106,.12); border-radius: 7px; }
+  .pt-meld-group .tile { width: 40px; height: 60px; flex: 0 0 auto; }
   .pt-meld-label { color: #ffe6a7; font-size: 12px; font-weight: 700; margin-right: 2px; }
-  #pt-actions { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; gap: 16px; z-index: 6; }
+  #pt-actions { display: flex; gap: 16px; justify-content: center; align-items: center; margin-top: 2px; }
   #pt-actions.hidden { display: none; }
   .pt-win-btn { height: 60px; border: none; background: transparent center / contain no-repeat; cursor: pointer; }
   .pt-win-btn.ron { width: 140px; background-image: url('items/bottom/GAME/和_普通.svg'); }
@@ -188,7 +183,7 @@
     border-radius: 8px; cursor: pointer;
   }
   .pt-meld-opt:hover { background: rgba(233,196,106,.16); }
-  .pt-meld-opt .pt-kind { color: #ffe6a7; font-weight: 800; width: 34px; flex: 0 0 auto; }
+  .pt-meld-opt .pt-kind { color: #ffe6a7; font-weight: 800; width: 58px; flex: 0 0 auto; font-size: 14px; }
   .pt-meld-opt .tile { width: 36px; height: 54px; }
   #pt-meld-cancel {
     align-self: center; margin-top: 2px; padding: 6px 22px;
@@ -1523,18 +1518,18 @@
       <div id="pt-center">
         <div id="pt-table">
           <div id="pt-play">
-            <div class="pt-area" id="pt-hand-area">
-              <div class="pt-area-title">手牌 <span id="pt-hand-count">0</span></div>
+            <div id="pt-hand-area" class="pt-line">
+              <div class="pt-line-title">手牌 <span id="pt-hand-count">0</span></div>
               <div id="pt-hand" class="pt-tiles"></div>
             </div>
-            <div class="pt-area" id="pt-meld-area">
-              <div class="pt-area-title">鸣牌区 <span id="pt-meld-count">0</span></div>
+            <div id="pt-meld-area" class="pt-line">
+              <div class="pt-line-title">鸣牌区 <span id="pt-meld-count">0</span></div>
               <div id="pt-melds"></div>
             </div>
-          </div>
-          <div id="pt-actions" class="hidden">
-            <button class="pt-win-btn ron" id="pt-ron-btn" title="和牌"></button>
-            <button class="pt-win-btn tsumo" id="pt-tsumo-btn" title="自摸"></button>
+            <div id="pt-actions" class="hidden">
+              <button class="pt-win-btn ron" id="pt-ron-btn" title="和牌"></button>
+              <button class="pt-win-btn tsumo" id="pt-tsumo-btn" title="自摸"></button>
+            </div>
           </div>
           <div id="pt-meld-window" class="hidden">
             <div id="pt-meld-panel">
@@ -5398,6 +5393,9 @@ function ptSequencesWith(rank){
   if ([RANK_MAX, 2, 3].includes(rank)) out.push([RANK_MAX, 2, 3]);
   return out;
 }
+function ptOtherColorSuit(suit){
+  return suit === 's' ? 'c' : suit === 'c' ? 's' : suit === 'h' ? 'd' : suit === 'd' ? 'h' : null;
+}
 function ptBuildMeldOptions(type){
   const opts = [];
   const available = (tiles) => {
@@ -5405,28 +5403,48 @@ function ptBuildMeldOptions(type){
     for (const t of tiles){ const k = ptKey(t.suit, t.rank); need[k] = (need[k] || 0) + 1; }
     return Object.entries(need).every(([k, n]) => (ptCounts[k] || 0) >= n);
   };
+  const push = (kind, tiles) => { if (available(tiles)) opts.push({ kind, tiles }); };
   if (isJoker(type)){
     const combos = [
-      ['碰', ['R','R','R']], ['碰', ['R','R','Y']], ['碰', ['R','Y','Y']], ['碰', ['Y','Y','Y']],
       ['杠', ['R','R','R','R']], ['杠', ['R','R','R','Y']], ['杠', ['R','R','Y','Y']], ['杠', ['R','Y','Y','Y']], ['杠', ['Y','Y','Y','Y']],
+      ['碰', ['R','R','R']], ['碰', ['R','R','Y']], ['碰', ['R','Y','Y']], ['碰', ['Y','Y','Y']],
     ];
     for (const [kind, suits] of combos){
       if (!suits.includes(type.suit)) continue;
-      const tiles = suits.map(s => ({ suit:s, rank:0 }));
-      if (available(tiles)) opts.push({ kind, tiles });
+      push(kind, suits.map(s => ({ suit:s, rank:0 })));
     }
-  } else {
-    const k = ptKey(type.suit, type.rank);
-    const n = ptCounts[k] || 0;
-    if (n >= 3) opts.push({ kind:'碰', tiles:[{ suit:type.suit, rank:type.rank }, { suit:type.suit, rank:type.rank }, { suit:type.suit, rank:type.rank }] });
-    if (n >= 4) opts.push({ kind:'杠', tiles:[{ suit:type.suit, rank:type.rank }, { suit:type.suit, rank:type.rank }, { suit:type.suit, rank:type.rank }, { suit:type.suit, rank:type.rank }] });
-    if (isNumberRank(type.rank) || type.rank === RANK_MAX){
-      for (const seq of ptSequencesWith(type.rank)){
-        const tiles = seq.map(r => ({ suit:type.suit, rank:r }));
-        if (available(tiles)) opts.push({ kind:'吃', tiles });
+    return opts;
+  }
+  const s = type.suit, r = type.rank, b = ptOtherColorSuit(s);
+  const t = () => ({ suit:s, rank:r });
+  const tb = () => ({ suit:b, rank:r });
+  // 杠：4-0 或 3-1（同色杠最多替代一张）
+  push('杠', [t(), t(), t(), t()]);
+  if (b){
+    push('同色杠', [t(), t(), t(), tb()]);
+    push('同色杠', [t(), tb(), tb(), tb()]);
+  }
+  // 碰：普通 3 张；同色碰可 2+1 或 1+2
+  push('碰', [t(), t(), t()]);
+  if (b){
+    push('同色碰', [t(), t(), tb()]);
+    push('同色碰', [t(), tb(), tb()]);
+  }
+  // 吃：普通同花色，以及同色不同花的替代分支（最多替代两张，仍为同色）
+  if (isNumberRank(r) || r === RANK_MAX){
+    for (const seq of ptSequencesWith(r)){
+      push('吃', seq.map(x => ({ suit:s, rank:x })));
+      if (!b) continue;
+      const selPos = seq.indexOf(r);
+      for (let j = 0; j < seq.length; j++){
+        if (j === selPos) continue;
+        push('同色吃', seq.map((x, k) => ({ suit:k === j ? b : s, rank:x })));
       }
+      push('同色吃', seq.map((x, k) => ({ suit:k === selPos ? s : b, rank:x })));
     }
   }
+  const order = { '杠':0, '同色杠':1, '碰':2, '同色碰':3, '吃':4, '同色吃':5 };
+  opts.sort((a, b2) => (order[a.kind] ?? 9) - (order[b2.kind] ?? 9));
   return opts;
 }
 function ptOpenMeld(type){
