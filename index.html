@@ -124,7 +124,20 @@
   }
   #pt-cards .tile { width: 40px; height: 60px; position: relative; cursor: pointer; transition: transform .12s ease; }
   #pt-cards .tile:hover { transform: translateY(-3px); }
-  #pt-cards .tile.pt-empty { opacity: .3; filter: grayscale(1); cursor: default; }
+  .pt-tile-wrap { display: flex; flex-direction: column; align-items: center; gap: 1px; flex: 0 0 auto; }
+  .pt-tile-label {
+    min-width: 36px; max-width: 48px; text-align: center;
+    font-size: 10px; line-height: 1.25; font-weight: 800;
+    padding: 1px 2px; border-radius: 5px;
+    background: #f7f3e8; border: 1px solid rgba(120,85,40,.55);
+    color: #1b1b1b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .pt-tile-label.black { color: #1b1b1b; }
+  .pt-tile-label.red { color: #b3261e; }
+  .pt-tile-label.joker { color: #6a3fa0; }
+  #pt-cards .pt-tile-wrap { width: 100%; }
+  #pt-cards .pt-tile-wrap.pt-empty { opacity: .3; filter: grayscale(1); }
+  #pt-cards .pt-tile-wrap.pt-empty .tile { cursor: default; }
   #pt-cards .pt-count {
     position: absolute; right: -2px; bottom: -2px; z-index: 2;
     background: rgba(0,0,0,.72); color: #ffe6a7;
@@ -5304,6 +5317,18 @@ let patternPaletteBuilt = false;
 let ptTypes = [], ptPaletteEls = {}, ptCounts = {};
 let ptHand = [], ptMelds = [], ptMeldOptions = [], ptTileSeq = 500000, ptClickTimer = null;
 function ptKey(suit, rank){ return suit + '-' + rank; }
+function ptTileWrap(t, opts){
+  const wrap = document.createElement('div');
+  wrap.className = 'pt-tile-wrap';
+  const tile = tileEl(t, opts || {});
+  wrap.appendChild(tile);
+  const lab = document.createElement('div');
+  lab.className = 'pt-tile-label ' + (isJoker(t) ? 'joker' : suitColor(t.suit));
+  lab.textContent = tileText(t);
+  lab.title = isJoker(t) ? (t.suit === 'R' ? '大王' : '小王') : (tileText(t) + '（' + (suitColor(t.suit) === 'black' ? '黑色' : '红色') + '）');
+  wrap.appendChild(lab);
+  return { wrap, tile };
+}
 function buildPatternPalette(){
   const host = document.getElementById('pt-cards');
   if (!host || patternPaletteBuilt) return;
@@ -5314,18 +5339,17 @@ function buildPatternPalette(){
   order.push({ suit:'R', rank:0, id:id++ });
   order.push({ suit:'Y', rank:0, id:id++ });
   for (const t of order){
-    const el = tileEl(t, { small:true });
-    el.classList.add('pt-card');
-    el.title = tileText(t);
-    el.dataset.key = ptKey(t.suit, t.rank);
+    const { wrap, tile } = ptTileWrap(t, { small:true });
+    tile.classList.add('pt-card');
+    tile.title = tileText(t);
     const cnt = document.createElement('span');
     cnt.className = 'pt-count';
     cnt.textContent = '4';
-    el.appendChild(cnt);
-    host.appendChild(el);
-    ptPaletteEls[ptKey(t.suit, t.rank)] = el;
+    tile.appendChild(cnt);
+    host.appendChild(wrap);
+    ptPaletteEls[ptKey(t.suit, t.rank)] = wrap;
     ptTypes.push({ suit:t.suit, rank:t.rank });
-    el.addEventListener('click', () => {
+    wrap.addEventListener('click', () => {
       if ((ptCounts[ptKey(t.suit, t.rank)] || 0) <= 0) return;
       if (ptClickTimer) clearTimeout(ptClickTimer);
       ptClickTimer = setTimeout(() => {
@@ -5333,7 +5357,7 @@ function buildPatternPalette(){
         ptAddToHand({ suit:t.suit, rank:t.rank });
       }, 240);
     });
-    el.addEventListener('dblclick', (ev) => {
+    wrap.addEventListener('dblclick', (ev) => {
       ev.preventDefault();
       if (ptClickTimer){ clearTimeout(ptClickTimer); ptClickTimer = null; }
       ptOpenMeld({ suit:t.suit, rank:t.rank });
@@ -5469,7 +5493,7 @@ function ptOpenMeld(type){
       kd.className = 'pt-kind';
       kd.textContent = opt.kind;
       b.appendChild(kd);
-      for (const t of opt.tiles) b.appendChild(tileEl(t, { small:true }));
+      for (const t of opt.tiles) b.appendChild(ptTileWrap(t, { small:true }).wrap);
       b.addEventListener('click', () => ptAddMeld(opt));
       host.appendChild(b);
     }
@@ -5494,9 +5518,9 @@ function ptRefresh(){
   if (handEl){
     handEl.innerHTML = '';
     for (const t of patternSortTiles(ptHand.slice())){
-      const el = tileEl(t, { small:true });
-      el.dataset.id = t.id;
-      handEl.appendChild(el);
+      const { wrap } = ptTileWrap(t, { small:true });
+      wrap.dataset.id = t.id;
+      handEl.appendChild(wrap);
     }
   }
   const meldsEl = document.getElementById('pt-melds');
@@ -5510,7 +5534,7 @@ function ptRefresh(){
       lab.className = 'pt-meld-label';
       lab.textContent = m.kind;
       g.appendChild(lab);
-      for (const t of m.tiles) g.appendChild(tileEl(t, { small:true }));
+      for (const t of m.tiles) g.appendChild(ptTileWrap(t, { small:true }).wrap);
       meldsEl.appendChild(g);
     });
   }
@@ -5609,7 +5633,7 @@ document.getElementById('restart').addEventListener('click', (e) => {
   }
 }, true);
 document.getElementById('pt-hand').addEventListener('dblclick', (e) => {
-  const el = e.target && e.target.closest ? e.target.closest('.tile') : null;
+  const el = e.target && e.target.closest ? e.target.closest('.pt-tile-wrap') : null;
   if (!el) return;
   ptRemoveHand(Number(el.dataset.id));
 });
