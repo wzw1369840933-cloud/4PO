@@ -217,7 +217,10 @@
     box-shadow: 0 20px 50px rgba(0,0,0,.65);
   }
   #pt-win-title { color: #ffe6a7; font-size: 26px; font-weight: 900; margin-bottom: 6px; }
-  #pt-win-sub { color: #9fc9b1; font-size: 15px; margin-bottom: 12px; }
+  #pt-win-sub { color: #9fc9b1; font-size: 15px; margin-bottom: 8px; }
+  #pt-win-score { text-align: center; margin: 2px 0 10px; }
+  #pt-win-score .pt-score-main { color: #ffe6a7; font-size: 22px; font-weight: 900; letter-spacing: 1px; }
+  #pt-win-score .pt-score-detail { color: #9fc9b1; font-size: 12px; margin-top: 3px; }
   #pt-win-hand { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
   #pt-win-hand .tile { width: 46px; height: 69px; }
   #pt-win-melds { display: flex; flex-direction: column; gap: 4px; align-items: center; margin-bottom: 10px; }
@@ -1179,6 +1182,7 @@
     max-width: 94%;
   }
   #win-panel .win-title { font-size: 26px; font-weight: 800; color: var(--gold); letter-spacing: 1px; }
+  #win-panel .win-score-total { font-size: 22px; font-weight: 900; color: #ffe6a7; text-align: center; letter-spacing: 1px; margin: 2px 0 10px; }
   #win-panel .win-sub { font-size: 17px; color: #ffe6a7; font-weight: 700; }
   #win-panel .win-close {
     position: absolute; right: 10px; top: 8px;
@@ -1614,6 +1618,7 @@
       <div id="pt-win-panel">
         <div id="pt-win-title"></div>
         <div id="pt-win-sub"></div>
+        <div id="pt-win-score"></div>
         <div id="pt-win-hand"></div>
         <div id="pt-win-melds"></div>
         <div id="pt-win-patterns"></div>
@@ -4876,9 +4881,12 @@ function renderWinModal(){
     let subTxt = '';
     if (info.winTile) subTxt += '和牌张 ' + tileText(info.winTile) + '　';
     if (!info.isTsumo && info.discarderSeat != null && players[info.discarderSeat]) subTxt += '（' + players[info.discarderSeat].name + ' 放铳）　';
-    subTxt += '得分 +' + info.score;
     sub.textContent = subTxt;
     panel.appendChild(sub);
+    const scoreLine = document.createElement('div');
+    scoreLine.className = 'win-score-total';
+    scoreLine.textContent = '和牌得分 +' + info.score;
+    panel.appendChild(scoreLine);
     // 王牌加分：把每个王牌面子/将牌的加成列出来
     if (info.jokerPct > 0 && info.jokerParts && info.jokerParts.length){
       const jb = document.createElement('div');
@@ -5565,7 +5573,7 @@ if (typeof window !== 'undefined' && window.addEventListener){
 let patternPaletteBuilt = false;
 let ptTypes = [], ptPaletteEls = {}, ptCounts = {};
 let ptHand = [], ptMelds = [], ptMeldOptions = [], ptTileSeq = 500000, ptClickTimer = null;
-let ptLastHandTileId = null, ptLastWinCtx = null;
+let ptLastHandTileId = null, ptLastWinCtx = null, ptLastWinTsumo = false;
 function ptKey(suit, rank){ return suit + '-' + rank; }
 function ptTileWrap(t, opts){
   const wrap = document.createElement('div');
@@ -5863,7 +5871,7 @@ function ptShowWin(tsumo){
   const handEl = document.getElementById('pt-win-hand');
   if (handEl){
     handEl.innerHTML = '';
-    for (const t of patternSortTiles(ptHand.slice())) handEl.appendChild(tileEl(t, {}));
+    for (const t of patternSortTiles(ptHand.slice())) handEl.appendChild(ptTileWrap(t, {}).wrap);
   }
   const meldsEl = document.getElementById('pt-win-melds');
   if (meldsEl){
@@ -5875,14 +5883,55 @@ function ptShowWin(tsumo){
       lab.className = 'pt-win-meld-label';
       lab.textContent = m.kind;
       row.appendChild(lab);
-      for (const t of m.tiles) row.appendChild(tileEl(t, {}));
+      for (const t of m.tiles) row.appendChild(ptTileWrap(t, {}).wrap);
       meldsEl.appendChild(row);
     }
   }
   const winTile = ptHand.find(t => t.id === ptLastHandTileId) || null;
+  ptLastWinTsumo = !!tsumo;
   ptLastWinCtx = buildPatternContext(ptHand, ptMelds, { winTile, isTsumo:tsumo, seat:0, dealerSeat:0 });
+  renderPtWinScore(tsumo, ptLastWinCtx);
   renderPtWinPatterns(matchWinPatterns(ptLastWinCtx));
   document.getElementById('pt-win-modal').classList.remove('hidden');
+}
+function calcPtWinScore(tsumo, ctx){
+  const melds = ptMelds.map(m => {
+    const norm = normalizePatternMeld(m);
+    return { type:norm.type, tiles:m.tiles, sub:norm.sub, how:'test' };
+  });
+  const joker = calcJokerBonus(ptHand, melds);
+  const hits = selectWinPatterns(matchWinPatterns(ctx));
+  const sum = sumWinPatterns(hits);
+  const base = tsumo ? 8 : 4;
+  const totalPct = joker.pct + sum.pct;
+  return {
+    score: Math.round(base * (1 + totalPct / 100)) + sum.points,
+    base,
+    jokerPct: joker.pct,
+    patternPct: sum.pct,
+    patternPoints: sum.points,
+    patterns: hits,
+  };
+}
+function renderPtWinScore(tsumo, ctx){
+  const host = document.getElementById('pt-win-score');
+  if (!host || !ctx) return;
+  host.innerHTML = '';
+  const r = calcPtWinScore(tsumo, ctx);
+  const main = document.createElement('div');
+  main.className = 'pt-score-main';
+  main.textContent = '和牌得分 +' + r.score;
+  const detail = document.createElement('div');
+  detail.className = 'pt-score-detail';
+  const pctParts = [];
+  if (r.jokerPct) pctParts.push('王牌 ' + r.jokerPct + '%');
+  if (r.patternPct) pctParts.push('牌型 ' + r.patternPct + '%');
+  let txt = (tsumo ? '自摸 ' : '和牌 ') + r.base + ' × (1' + (pctParts.length ? ' + ' + pctParts.join(' + ') : '') + ')';
+  if (r.patternPoints) txt += ' + 牌型固定 ' + r.patternPoints + ' 分';
+  txt += ' = ' + r.score + '　·　按已启用牌型计算，宝牌按 0 计';
+  detail.textContent = txt;
+  host.appendChild(main);
+  host.appendChild(detail);
 }
 function renderPtWinPatterns(hits){
   const host = document.getElementById('pt-win-patterns');
@@ -5926,7 +5975,10 @@ function renderPtWinPatterns(hits){
       btn.textContent = '测试通过 · 启用';
       btn.addEventListener('click', () => {
         enableWinPattern(h.def.id);
-        if (ptLastWinCtx) renderPtWinPatterns(matchWinPatterns(ptLastWinCtx));
+        if (ptLastWinCtx){
+          renderPtWinPatterns(matchWinPatterns(ptLastWinCtx));
+          renderPtWinScore(ptLastWinTsumo, ptLastWinCtx);
+        }
       });
       row.appendChild(btn);
     }
@@ -5939,7 +5991,7 @@ function ptHideWin(){
 function ptReset(){
   if (ptClickTimer){ clearTimeout(ptClickTimer); ptClickTimer = null; }
   ptHand = []; ptMelds = [];
-  ptLastHandTileId = null; ptLastWinCtx = null;
+  ptLastHandTileId = null; ptLastWinCtx = null; ptLastWinTsumo = false;
   ptCounts = {};
   for (const t of ptTypes) ptCounts[ptKey(t.suit, t.rank)] = 4;
   ptCloseMeldWindow();
