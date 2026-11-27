@@ -1766,11 +1766,34 @@
           <li>AI 也会在自己听牌时报听；诈听被查验同样受罚。</li>
         </ul>
 
-        <h3>计分（当前为占位，后续接入完整牌型分）</h3>
-        <p>自摸 8 分 · 荣和（放铳）4 分，再乘 <b>(1 + 王牌加成% + 宝牌加成%)</b>；多家荣和时每家分别结算。</p>
+        <h3>计分与同色惩罚</h3>
+        <p><b>总得分</b> = 结算得分{ <b>[（和牌得分 + 百分比加成得分） - 同色和牌惩罚 - 整数同色惩罚] ÷ 同色约数惩罚</b> } + 他人同色惩罚（先加整数，再乘倍数）。</p>
+        <ul>
+          <li><b>和牌得分</b> = 牌型得分 + 整数加成得分（整数加成目前为 0，后续接入）。</li>
+          <li><b>牌型得分</b>：基础分（自摸 8 / 荣和 4）+ 已启用和牌牌型的百分比/固定分。</li>
+          <li><b>百分比加成得分</b>：目前为王牌加成 + 阴阳宝牌加成，按和牌得分计算。</li>
+          <li><b>同色和牌惩罚</b>：和牌张为同色张时，<b>-25%</b>。</li>
+          <li><b>整数同色惩罚 / 同色约数惩罚</b>：按和牌方的同色牌型/同色杠数量，依次按下表结算；<b>同色杠排在前面</b>，只取最后一档的乘/除，如果减去整数后为负数，乘除方向反转。（当前先统计鸣牌区；暗手同色组等牌型分解接入后自动计入。）</li>
+          <li><b>他人同色惩罚</b>：荣和时，按放铳方鸣牌区里的同色牌型/同色杠数量，先加整数，再乘最后一档倍数（若他人结算为负则改为除）。</li>
+        </ul>
+        <p><b>和牌方同色惩罚表</b>（同色牌型 / 同色杠）：</p>
+        <ul>
+          <li>1 个：-8 / -16</li>
+          <li>2 个：-16 / -32</li>
+          <li>3 个：÷2（负则 ×2）/ ÷4（负则 ×4）</li>
+          <li>4 个：÷4（负则 ×4）/ ÷8（负则 ×8）</li>
+        </ul>
+        <p><b>放铳方同色惩罚表</b>（同色牌型 / 同色杠）：</p>
+        <ul>
+          <li>1 个：+8 / +16</li>
+          <li>2 个：+16 / +32</li>
+          <li>3 个：×2（负则 ÷2）/ ×4（负则 ÷4）</li>
+          <li>4 个：×4（负则 ÷4）/ ×8（负则 ÷8）</li>
+        </ul>
+        <p>结算为负时：荣和由和牌方支付给放铳方；自摸则由和牌方平均支付给其他玩家，除不尽的部分由庄家获得；若和牌方就是庄家，则由其<strong>对家</strong>获得。</p>
 
         <h3>尚未实装（后续版本）</h3>
-        <p>万能牌、宝牌、公池、报听、摸牌规则③④、完整牌型计分与直接获胜牌型、多人模式；牌型可能性栏 / 状态栏 / 聊天栏目前仍是占位。</p>
+        <p>万能牌、公池、摸牌规则③④、直接获胜牌型、多人模式；牌型可能性栏 / 状态栏 / 聊天栏目前仍是占位。</p>
       </div>
     </div>
   </div>
@@ -2849,6 +2872,146 @@ function sumWinPatterns(hits){
     points += h.def.bonusPoints || 0;
   }
   return { pct, points };
+}
+
+// ================== 结算公式（带标签） ==================
+// 总得分 = 结算得分{[(和牌得分 + 百分比加成得分) - 同色和牌惩罚 - 整数同色惩罚] ÷ 同色约数惩罚} + 他人同色惩罚
+// 和牌得分 = 牌型得分 + 整数加成得分（整数加成目前为 0，后续从这里接入）
+// 百分比加成得分 = 和牌得分 × (王牌% + 宝牌%) / 100
+// 惩罚/加成的档位按「同色杠在前、同色牌型在后」排列，只取最后一档的乘/除，例：
+// 2 同色牌型 + 1 同色杠：先按杠 -16，再按牌型 -16，最后 ÷2 → (得分-16-16)÷2。
+const SAME_COLOR_SELF_TIERS = {
+  pattern: [{ int:-8 }, { int:-16 }, { div:2 }, { div:4 }],
+  kong:    [{ int:-16 }, { int:-32 }, { div:4 }, { div:8 }],
+};
+const SAME_COLOR_OTHER_TIERS = {
+  pattern: [{ int:8 }, { int:16 }, { mul:2 }, { mul:4 }],
+  kong:    [{ int:16 }, { int:32 }, { mul:4 }, { mul:8 }],
+};
+// 公式标签：后续接入新加分项时，直接往 calcSettlementScore 的对应字段加
+const SCORE_COMPONENT_LABELS = {
+  baseScore: '基础分',
+  patternScore: '牌型得分',
+  integerBonusScore: '整数加成得分',
+  handScore: '和牌得分',
+  patternPct: '牌型百分比',
+  jokerPct: '王牌百分比',
+  doraPct: '宝牌百分比',
+  percentBonusScore: '百分比加成得分',
+  prePenaltyScore: '惩罚前得分',
+  sameColorWinPenalty: '同色和牌惩罚',
+  sameColorIntegerPenalty: '整数同色惩罚',
+  sameColorDivisor: '同色约数惩罚',
+  selfSettlementScore: '结算得分',
+  otherSameColorBonus: '他人同色惩罚',
+  settlementScore: '总得分',
+};
+function countSameColorGroups(melds){
+  let patternCount = 0, kongCount = 0;
+  for (const m of melds || []){
+    const info = normalizePatternMeld(m);
+    if (!info.sameColor) continue;
+    if (info.type === 'kong') kongCount++;
+    else patternCount++;
+  }
+  return { patternCount, kongCount, total: patternCount + kongCount };
+}
+function buildSameColorTiers(kongCount, patternCount, table){
+  const tiers = [];
+  const k = Math.max(0, Math.min(4, kongCount | 0));
+  const total = Math.min(4, k + Math.max(0, patternCount | 0));
+  for (let pos = 0; pos < total; pos++){
+    if (pos < k) tiers.push(table.kong[pos]);
+    else tiers.push(table.pattern[pos]);
+  }
+  return tiers;
+}
+function signedScoreText(n){
+  const v = Number(n) || 0;
+  return (v > 0 ? '+' : '') + v;
+}
+function calcSettlementScore(input){
+  input = input || {};
+  const baseScore = Number(input.baseScore) || 0;
+  const patternPct = Number(input.patternPct) || 0;
+  const patternPoints = Number(input.patternPoints) || 0;
+  const integerBonusScore = Number(input.integerBonusScore) || 0;
+  const jokerPct = Number(input.jokerPct) || 0;
+  const doraPct = Number(input.doraPct) || 0;
+  const sameColorWin = !!input.sameColorWin;
+  const selfGroups = input.selfGroups || { patternCount:0, kongCount:0 };
+  const otherGroups = input.otherGroups || null;
+
+  const patternScore = Math.round(baseScore * (1 + patternPct / 100)) + patternPoints;
+  const handScore = patternScore + integerBonusScore;
+  const percentBonusScore = Math.round(handScore * (jokerPct + doraPct) / 100);
+  const prePenaltyScore = handScore + percentBonusScore;
+  const sameColorWinPenalty = sameColorWin ? Math.round(prePenaltyScore * 25 / 100) : 0;
+
+  const selfTiers = buildSameColorTiers(selfGroups.kongCount || 0, selfGroups.patternCount || 0, SAME_COLOR_SELF_TIERS);
+  let sameColorIntegerPenalty = 0;
+  for (const t of selfTiers) if (t.int) sameColorIntegerPenalty += t.int;
+  let afterInteger = prePenaltyScore - sameColorWinPenalty + sameColorIntegerPenalty;
+  const lastSelf = selfTiers[selfTiers.length - 1];
+  let sameColorDivisor = 1;
+  let sameColorMultiplierLabel = '';
+  let selfSettlementScore = Math.round(afterInteger);
+  if (lastSelf && lastSelf.div){
+    sameColorDivisor = lastSelf.div;
+    if (afterInteger < 0){
+      selfSettlementScore = Math.round(afterInteger * lastSelf.div);
+      sameColorMultiplierLabel = '×' + lastSelf.div;
+    } else {
+      selfSettlementScore = Math.round(afterInteger / lastSelf.div);
+      sameColorMultiplierLabel = '÷' + lastSelf.div;
+    }
+  }
+
+  const other = {
+    applied: false, patternCount:0, kongCount:0,
+    integerBonus:0, multiplier:1, multiplierLabel:'',
+    beforeMultiplier: selfSettlementScore, resultAfter: selfSettlementScore, bonus:0,
+  };
+  if (otherGroups && ((otherGroups.patternCount || 0) + (otherGroups.kongCount || 0) > 0)){
+    other.applied = true;
+    other.patternCount = otherGroups.patternCount || 0;
+    other.kongCount = otherGroups.kongCount || 0;
+    const tiers = buildSameColorTiers(other.kongCount, other.patternCount, SAME_COLOR_OTHER_TIERS);
+    for (const t of tiers) if (t.int) other.integerBonus += t.int;
+    other.beforeMultiplier = selfSettlementScore + other.integerBonus;
+    let afterOther = other.beforeMultiplier;
+    const lastOther = tiers[tiers.length - 1];
+    if (lastOther && lastOther.mul){
+      other.multiplier = lastOther.mul;
+      if (afterOther < 0){
+        afterOther = Math.round(afterOther / lastOther.mul);
+        other.multiplierLabel = '÷' + lastOther.mul;
+      } else {
+        afterOther = Math.round(afterOther * lastOther.mul);
+        other.multiplierLabel = '×' + lastOther.mul;
+      }
+    }
+    other.resultAfter = afterOther;
+    other.bonus = afterOther - selfSettlementScore;
+  }
+  const settlementScore = other.applied ? other.resultAfter : selfSettlementScore;
+  return {
+    baseScore,
+    patternPct, patternPoints, patternScore,
+    integerBonusScore, handScore,
+    jokerPct, doraPct, percentBonusScore, prePenaltyScore,
+    sameColorWinPenaltyPct: sameColorWin ? 25 : 0,
+    sameColorWinPenalty,
+    sameColorGroupCount: selfGroups.patternCount || 0,
+    sameColorKongCount: selfGroups.kongCount || 0,
+    sameColorIntegerPenalty,
+    sameColorTiers: selfTiers,
+    sameColorDivisor,
+    sameColorMultiplierLabel,
+    selfSettlementScore,
+    otherSameColor: other,
+    settlementScore,
+  };
 }
 const WinPatternUtil = {
   isJoker, suitColor, tileText,
@@ -3991,7 +4154,10 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
   revealDoraYin();
   const winHand = p.hand.slice();
   if (winTile && !winHand.some(t => t.id === winTile.id)) winHand.push(winTile);
-  // 宝牌 + 王牌 + 和牌牌型加成：结算总分 ×(1 + 总百分比) + 牌型固定分
+  // 和牌张是否靠同色替代完成（也是同色和牌惩罚 -25% 的判定）
+  const handBeforeWin = p.hand.filter(t => !(winTile && t.id === winTile.id));
+  const sameColorWin = !!(winTile && !isNormalTile(handBeforeWin, p.melds.length, winTile));
+  // 宝牌 + 王牌 + 和牌牌型 + 同色惩罚：统一走带标签的结算公式
   const jokerBonus = calcJokerBonus(winHand, p.melds);
   const doraBonus = calcDoraPct(winHand, p.melds);
   const patternCtx = buildPatternContext(winHand, p.melds, {
@@ -4000,20 +4166,58 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
   });
   const patternHits = selectWinPatterns(matchWinPatterns(patternCtx));
   const patternSum = sumWinPatterns(patternHits);
-  const totalPct = jokerBonus.pct + doraBonus.pct + patternSum.pct;
+  const selfGroups = countSameColorGroups(p.melds);
+  const otherGroups = (!isTsumo && discarderSeat != null && players[discarderSeat])
+    ? countSameColorGroups(players[discarderSeat].melds)
+    : null;
   const baseScore = isTsumo ? 8 : 4;
-  const score = Math.round(baseScore * (1 + totalPct / 100)) + patternSum.points;
+  const settlement = calcSettlementScore({
+    baseScore,
+    patternPct: patternSum.pct,
+    patternPoints: patternSum.points,
+    integerBonusScore: 0,       // 整数加成得分：后续从这里接入
+    jokerPct: jokerBonus.pct,
+    doraPct: doraBonus.pct,
+    sameColorWin,
+    selfGroups,
+    otherGroups,
+  });
+  const score = settlement.settlementScore;
   const winName = isTsumo ? '自摸' : (discarderSeat!=null ? ('荣和（'+players[discarderSeat].name+' 放铳）') : '荣和');
   const tileTxt = winTile ? ('和牌张 ' + tileText(winTile) + '，') : '';
   const patternNames = patternHits.map(h => h.def.name + ' ' + winPatternBonusText(h.def)).join('　');
   const bonusTxt = (jokerBonus.pct > 0 ? ('王牌加成 +' + jokerBonus.pct + '%，') : '')
                  + (doraBonus.pct > 0 ? ('宝牌加成 +' + doraBonus.pct + '%，') : '')
                  + (patternHits.length && (patternSum.pct || patternSum.points) ? ('牌型加成 ' + (patternSum.pct ? '+' + patternSum.pct + '%' : '') + (patternSum.points ? (patternSum.pct ? ' +' : '+') + patternSum.points + '分' : '') + '（' + patternNames + '），') : '');
-  log('🎉 ' + p.name + ' ' + winName + ' 和牌！' + tileTxt + bonusTxt + '得分 +' + score, true);
-  if (isTsumo){
-    for (let i=0;i<PLAYER_COUNT;i++) if (i!==seat) log(players[i].name + ' 支付 ' + score + ' 分给 ' + p.name + '（MVP 简化计分）');
-  } else if (discarderSeat != null){
-    log(players[discarderSeat].name + ' 支付 ' + score + ' 分给 ' + p.name + '（MVP 简化计分）');
+  log('🎉 ' + p.name + ' ' + winName + ' 和牌！' + tileTxt + bonusTxt + '得分 ' + signedScoreText(score), true);
+  if (sameColorWin || selfGroups.total || (otherGroups && otherGroups.total)){
+    const parts = [];
+    if (sameColorWin) parts.push('同色和牌惩罚 -' + settlement.sameColorWinPenalty);
+    if (selfGroups.total) parts.push('同色牌型 ' + selfGroups.patternCount + ' 组 / 同色杠 ' + selfGroups.kongCount + ' 组：整数 ' + settlement.sameColorIntegerPenalty + (settlement.sameColorMultiplierLabel ? '，' + settlement.sameColorMultiplierLabel : ''));
+    if (otherGroups && otherGroups.total) parts.push('放铳方同色惩罚：+' + settlement.otherSameColor.integerBonus + (settlement.otherSameColor.multiplierLabel ? '，' + settlement.otherSameColor.multiplierLabel : ''));
+    log('结算明细：' + parts.join('；') + '。', true);
+  }
+  if (score > 0){
+    if (isTsumo){
+      for (let i=0;i<PLAYER_COUNT;i++) if (i!==seat) log(players[i].name + ' 支付 ' + score + ' 分给 ' + p.name + '（MVP 简化计分）');
+    } else if (discarderSeat != null){
+      log(players[discarderSeat].name + ' 支付 ' + score + ' 分给 ' + p.name + '（MVP 简化计分）');
+    }
+  } else if (score < 0){
+    const amount = Math.abs(score);
+    if (isTsumo){
+      const others = [];
+      for (let i=0;i<PLAYER_COUNT;i++) if (i!==seat) others.push(i);
+      const base = Math.floor(amount / others.length);
+      const rem = amount - base * others.length;
+      const remSeat = (seat !== dealerSeat) ? dealerSeat : ((seat + 2) % PLAYER_COUNT);
+      for (const i of others){
+        const recv = base + (i === remSeat ? rem : 0);
+        if (recv > 0) log(p.name + ' 支付 ' + recv + ' 分给 ' + players[i].name + '（负分结算）');
+      }
+    } else if (discarderSeat != null){
+      log(p.name + ' 支付 ' + amount + ' 分给 ' + players[discarderSeat].name + '（负分结算）');
+    }
   }
   // 亮出手牌：按「型」排列；和牌张放最右侧并隔开显示（和摸牌时一样）
   const sorted = patternSortTiles(p.hand);
@@ -4039,12 +4243,19 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
     patternPct: patternSum.pct,
     patternPoints: patternSum.points,
     patterns: patternHits.map(h => ({ id:h.def.id, name:h.def.name, desc:h.def.desc, bonusPct:h.def.bonusPct, bonusPoints:h.def.bonusPoints })),
+    scoreBreakdown: settlement,
+    sameColorWinPenalty: settlement.sameColorWinPenalty,
+    sameColorGroupCount: settlement.sameColorGroupCount,
+    sameColorKongCount: settlement.sameColorKongCount,
+    sameColorIntegerPenalty: settlement.sameColorIntegerPenalty,
+    sameColorMultiplierLabel: settlement.sameColorMultiplierLabel,
+    otherSameColor: settlement.otherSameColor,
+    selfSameColorGroups: selfGroups,
+    otherSameColorGroups: otherGroups,
     hand: p.hand.slice(),
     melds: p.melds.map(m => ({ type: m.type, sub: !!m.sub, how: m.how || 'minkan', tiles: m.tiles.slice() })),
   };
   // 同色和牌：和牌张靠同色替代完成时，手牌 + 鸣牌区洗乱后放进街牌区，下一局继续保留
-  const handBeforeWin = p.hand.filter(t => !(winTile && t.id === winTile.id));
-  const sameColorWin = !!(winTile && !isNormalTile(handBeforeWin, p.melds.length, winTile));
   if (sameColorWin){
     const moved = p.hand.slice();
     for (const m of p.melds) moved.push(...m.tiles);
@@ -4948,7 +5159,7 @@ function renderWinModal(){
     panel.appendChild(sub);
     const scoreLine = document.createElement('div');
     scoreLine.className = 'win-score-total';
-    scoreLine.textContent = '和牌得分 +' + info.score;
+    scoreLine.textContent = '和牌得分 ' + signedScoreText(info.score);
     panel.appendChild(scoreLine);
     // 王牌加分：把每个王牌面子/将牌的加成列出来
     if (info.jokerPct > 0 && info.jokerParts && info.jokerParts.length){
@@ -4973,6 +5184,27 @@ function renderWinModal(){
       const names = info.patterns.map(p => p.name + ' ' + winPatternBonusText(p)).join('　');
       pb.textContent = '牌型加成 ' + pctTxt + ptTxt + '　（' + names + '）';
       panel.appendChild(pb);
+    }
+    if (info.sameColorWinPenalty > 0){
+      const sc = document.createElement('div');
+      sc.className = 'win-joker-bonus';
+      sc.textContent = '同色和牌惩罚 -' + info.sameColorWinPenalty + '（和牌张为同色张，-25%）';
+      panel.appendChild(sc);
+    }
+    if (info.sameColorGroupCount > 0 || info.sameColorKongCount > 0){
+      const sc = document.createElement('div');
+      sc.className = 'win-joker-bonus';
+      sc.textContent = '整数同色惩罚 ' + info.sameColorIntegerPenalty + '（同色牌型 ' + info.sameColorGroupCount + ' 组 / 同色杠 ' + info.sameColorKongCount + ' 组）'
+        + (info.sameColorMultiplierLabel ? '，同色约数惩罚 ' + info.sameColorMultiplierLabel : '');
+      panel.appendChild(sc);
+    }
+    if (info.otherSameColor && info.otherSameColor.applied){
+      const oc = document.createElement('div');
+      oc.className = 'win-joker-bonus';
+      oc.textContent = '他人同色惩罚 +' + info.otherSameColor.integerBonus
+        + (info.otherSameColor.multiplierLabel ? '，' + info.otherSameColor.multiplierLabel : '')
+        + '（放铳方同色牌型 ' + info.otherSameColor.patternCount + ' 组 / 杠 ' + info.otherSameColor.kongCount + ' 组）';
+      panel.appendChild(oc);
     }
     // 手牌：型排列，关键张独立在最右
     const handRow = document.createElement('div');
@@ -5965,15 +6197,31 @@ function calcPtWinScore(tsumo, ctx){
   const joker = calcJokerBonus(ptHand, melds);
   const hits = selectWinPatterns(matchWinPatterns(ctx));
   const sum = sumWinPatterns(hits);
+  const winTile = ctx.winTile || null;
+  const handBefore = winTile ? ptHand.filter(t => t.id !== winTile.id) : ptHand.slice();
+  const sameColorWin = !!(winTile && !isNormalTile(handBefore, ptMelds.length, winTile));
+  const selfGroups = countSameColorGroups(ptMelds);
   const base = tsumo ? 8 : 4;
-  const totalPct = joker.pct + sum.pct;
-  return {
-    score: Math.round(base * (1 + totalPct / 100)) + sum.points,
-    base,
-    jokerPct: joker.pct,
+  const settlement = calcSettlementScore({
+    baseScore: base,
     patternPct: sum.pct,
     patternPoints: sum.points,
+    integerBonusScore: 0,
+    jokerPct: joker.pct,
+    doraPct: 0,
+    sameColorWin,
+    selfGroups,
+    otherGroups: null,
+  });
+  return {
+    ...settlement,
+    score: settlement.settlementScore,
     patterns: hits,
+    jokerPct: joker.pct,
+    jokerParts: joker.parts || [],
+    sameColorWin,
+    selfGroups,
+    base,
   };
 }
 function renderPtWinScore(tsumo, ctx){
@@ -5983,18 +6231,28 @@ function renderPtWinScore(tsumo, ctx){
   const r = calcPtWinScore(tsumo, ctx);
   const main = document.createElement('div');
   main.className = 'pt-score-main';
-  main.textContent = '和牌得分 +' + r.score;
-  const detail = document.createElement('div');
-  detail.className = 'pt-score-detail';
-  const pctParts = [];
-  if (r.jokerPct) pctParts.push('王牌 ' + r.jokerPct + '%');
-  if (r.patternPct) pctParts.push('牌型 ' + r.patternPct + '%');
-  let txt = (tsumo ? '自摸 ' : '和牌 ') + r.base + ' × (1' + (pctParts.length ? ' + ' + pctParts.join(' + ') : '') + ')';
-  if (r.patternPoints) txt += ' + 牌型固定 ' + r.patternPoints + ' 分';
-  txt += ' = ' + r.score + '　·　按已启用牌型计算，宝牌按 0 计';
-  detail.textContent = txt;
+  main.textContent = '和牌得分 ' + signedScoreText(r.score);
+  const d1 = document.createElement('div');
+  d1.className = 'pt-score-detail';
+  d1.textContent = '牌型得分 ' + r.patternScore + ' + 整数加成 ' + r.integerBonusScore + ' = 和牌得分 ' + r.handScore
+    + '　·　百分比加成 ' + signedScoreText(r.percentBonusScore);
+  const d2 = document.createElement('div');
+  d2.className = 'pt-score-detail';
+  const parts = [];
+  if (r.sameColorWinPenalty) parts.push('同色和牌惩罚 -' + r.sameColorWinPenalty);
+  if (r.sameColorGroupCount || r.sameColorKongCount){
+    parts.push('整数同色惩罚 ' + r.sameColorIntegerPenalty + '（同色牌型 ' + r.sameColorGroupCount + ' 组 / 杠 ' + r.sameColorKongCount + ' 组）');
+    if (r.sameColorMultiplierLabel) parts.push('同色约数惩罚 ' + r.sameColorMultiplierLabel);
+  }
+  parts.push('他人同色惩罚 0');
+  d2.textContent = parts.join('　·　');
+  const d3 = document.createElement('div');
+  d3.className = 'pt-score-detail';
+  d3.textContent = '按已启用牌型计算，宝牌按 0 计；他人同色惩罚只在正式对局荣和时结算';
   host.appendChild(main);
-  host.appendChild(detail);
+  host.appendChild(d1);
+  host.appendChild(d2);
+  host.appendChild(d3);
 }
 function renderPtWinPatterns(hits){
   const host = document.getElementById('pt-win-patterns');
@@ -6124,6 +6382,7 @@ window.__game = {
   matchWinPatterns, selectWinPatterns, sumWinPatterns, buildPatternContext,
   enableWinPattern, disableWinPattern, isWinPatternEnabled, winPatternBonusText,
   openWinPatternList, renderWinPatternList, WinPatternUtil, analyzeSameColorGroup,
+  calcSettlementScore, countSameColorGroups, signedScoreText, buildSameColorTiers, SCORE_COMPONENT_LABELS,
   getWinInfo(){ return winInfo; },
   getSwap(){ return { active: swapActive, humanDone: swapHumanDone, remaining: swapRemaining, selected: [...swapSelected], done: swapDone.slice() }; },
   setSwapEnabled(v){ swapEnabled = !!v; },
