@@ -1773,8 +1773,8 @@
           <li><b>牌型得分</b>：基础分（自摸 8 / 荣和 4）+ 已启用和牌牌型的百分比/固定分。</li>
           <li><b>百分比加成得分</b>：目前为王牌加成 + 阴阳宝牌加成，按和牌得分计算。</li>
           <li><b>同色和牌惩罚</b>：和牌张为同色张时，<b>-25%</b>。</li>
-          <li><b>整数同色惩罚 / 同色约数惩罚</b>：按和牌方的同色牌型/同色杠数量，依次按下表结算；<b>同色杠排在前面</b>，只取最后一档的乘/除，如果减去整数后为负数，乘除方向反转。（当前先统计鸣牌区；暗手同色组等牌型分解接入后自动计入。）</li>
-          <li><b>他人同色惩罚</b>：荣和时，按放铳方鸣牌区里的同色牌型/同色杠数量，先加整数，再乘最后一档倍数（若他人结算为负则改为除）。</li>
+          <li><b>整数同色惩罚 / 同色约数惩罚</b>：按和牌方的同色牌型/同色杠数量，依次按下表结算；<b>同色杠排在前面</b>，所有乘/除档位依次累乘/累除，如果减去整数后为负数，乘除方向反转。（当前先统计鸣牌区；暗手同色组等牌型分解接入后自动计入。）</li>
+          <li><b>他人同色惩罚</b>：荣和时，按放铳方鸣牌区里的同色牌型/同色杠数量，先加整数，再把所有倍数档依次累乘（若他人结算为负则改为累除）。</li>
         </ul>
         <p><b>和牌方同色惩罚表</b>（同色牌型 / 同色杠）：</p>
         <ul>
@@ -1791,6 +1791,7 @@
           <li>4 个：×4（负则 ÷4）/ ×8（负则 ÷8）</li>
         </ul>
         <p>结算为负时：荣和由和牌方支付给放铳方；自摸则由和牌方平均支付给其他玩家，除不尽的部分由庄家获得；若和牌方就是庄家，则由其<strong>对家</strong>获得。</p>
+        <p><b>累乘示例</b>：4 个同色杠 → 先 +16+32，再 ×4×8；4 个同色牌型 → 先 -8-16，再 ÷2÷4（负分则反向）。</p>
 
         <h3>尚未实装（后续版本）</h3>
         <p>万能牌、公池、摸牌规则③④、直接获胜牌型、多人模式；牌型可能性栏 / 状态栏 / 聊天栏目前仍是占位。</p>
@@ -2878,7 +2879,7 @@ function sumWinPatterns(hits){
 // 总得分 = 结算得分{[(和牌得分 + 百分比加成得分) - 同色和牌惩罚 - 整数同色惩罚] ÷ 同色约数惩罚} + 他人同色惩罚
 // 和牌得分 = 牌型得分 + 整数加成得分（整数加成目前为 0，后续从这里接入）
 // 百分比加成得分 = 和牌得分 × (王牌% + 宝牌%) / 100
-// 惩罚/加成的档位按「同色杠在前、同色牌型在后」排列，只取最后一档的乘/除，例：
+// 惩罚/加成的档位按「同色杠在前、同色牌型在后」排列，所有乘/除档依次累乘/累除，例：
 // 2 同色牌型 + 1 同色杠：先按杠 -16，再按牌型 -16，最后 ÷2 → (得分-16-16)÷2。
 const SAME_COLOR_SELF_TIERS = {
   pattern: [{ int:-8 }, { int:-16 }, { div:2 }, { div:4 }],
@@ -2952,20 +2953,22 @@ function calcSettlementScore(input){
   let sameColorIntegerPenalty = 0;
   for (const t of selfTiers) if (t.int) sameColorIntegerPenalty += t.int;
   let afterInteger = prePenaltyScore - sameColorWinPenalty + sameColorIntegerPenalty;
-  const lastSelf = selfTiers[selfTiers.length - 1];
-  let sameColorDivisor = 1;
-  let sameColorMultiplierLabel = '';
-  let selfSettlementScore = Math.round(afterInteger);
-  if (lastSelf && lastSelf.div){
-    sameColorDivisor = lastSelf.div;
+  const selfDivisors = selfTiers.filter(t => t.div).map(t => t.div);
+  const sameColorDivisors = selfDivisors.slice();
+  let sameColorDivisor = selfDivisors.reduce((a, b) => a * b, 1);
+  const selfLabels = [];
+  let selfSettlementScore = afterInteger;
+  for (const div of selfDivisors){
     if (afterInteger < 0){
-      selfSettlementScore = Math.round(afterInteger * lastSelf.div);
-      sameColorMultiplierLabel = '×' + lastSelf.div;
+      selfSettlementScore *= div;
+      selfLabels.push('×' + div);
     } else {
-      selfSettlementScore = Math.round(afterInteger / lastSelf.div);
-      sameColorMultiplierLabel = '÷' + lastSelf.div;
+      selfSettlementScore /= div;
+      selfLabels.push('÷' + div);
     }
   }
+  selfSettlementScore = Math.round(selfSettlementScore);
+  const sameColorMultiplierLabel = selfLabels.join('');
 
   const other = {
     applied: false, patternCount:0, kongCount:0,
@@ -2980,19 +2983,21 @@ function calcSettlementScore(input){
     for (const t of tiers) if (t.int) other.integerBonus += t.int;
     other.beforeMultiplier = selfSettlementScore + other.integerBonus;
     let afterOther = other.beforeMultiplier;
-    const lastOther = tiers[tiers.length - 1];
-    if (lastOther && lastOther.mul){
-      other.multiplier = lastOther.mul;
+    const otherMuls = tiers.filter(t => t.mul).map(t => t.mul);
+    other.multiplier = otherMuls.reduce((a, b) => a * b, 1);
+    const otherLabels = [];
+    for (const mul of otherMuls){
       if (afterOther < 0){
-        afterOther = Math.round(afterOther / lastOther.mul);
-        other.multiplierLabel = '÷' + lastOther.mul;
+        afterOther /= mul;
+        otherLabels.push('÷' + mul);
       } else {
-        afterOther = Math.round(afterOther * lastOther.mul);
-        other.multiplierLabel = '×' + lastOther.mul;
+        afterOther *= mul;
+        otherLabels.push('×' + mul);
       }
     }
-    other.resultAfter = afterOther;
-    other.bonus = afterOther - selfSettlementScore;
+    other.multiplierLabel = otherLabels.join('');
+    other.resultAfter = Math.round(afterOther);
+    other.bonus = other.resultAfter - selfSettlementScore;
   }
   const settlementScore = other.applied ? other.resultAfter : selfSettlementScore;
   return {
@@ -3007,6 +3012,7 @@ function calcSettlementScore(input){
     sameColorIntegerPenalty,
     sameColorTiers: selfTiers,
     sameColorDivisor,
+    sameColorDivisors,
     sameColorMultiplierLabel,
     selfSettlementScore,
     otherSameColor: other,
