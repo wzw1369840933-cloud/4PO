@@ -500,7 +500,19 @@
     font-size: 18px; cursor: pointer; padding: 2px 8px;
   }
   #win-pattern-close:hover { color: #fff; }
-  #win-pattern-list { padding: 12px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  #win-pattern-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 12px 18px; display: flex; flex-direction: column; gap: 10px; }
+  #win-pattern-list { padding: 0; overflow: visible; display: flex; flex-direction: column; gap: 8px; }
+  .win-pattern-section-title { color: #ffe6a7; font-size: 14px; font-weight: 800; padding: 2px 2px 0; }
+  .acc { border: 1px solid rgba(233,196,106,.35); border-radius: 10px; background: rgba(255,255,255,.04); overflow: hidden; }
+  .acc > summary { list-style: none; cursor: pointer; padding: 8px 12px; color: #ffe6a7; font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 8px; user-select: none; }
+  .acc > summary::-webkit-details-marker { display: none; }
+  .acc > summary::before { content: '▸'; color: #e9c46a; transition: transform .15s ease; display: inline-block; }
+  .acc[open] > summary::before { transform: rotate(90deg); }
+  .acc-body { padding: 2px 14px 12px; color: #d7ecdf; font-size: 13px; line-height: 1.6; }
+  .acc-body p { margin: 4px 0; }
+  .acc-sub { margin: 6px 0 0; border-color: rgba(233,196,106,.25); background: rgba(255,255,255,.03); }
+  .acc-sub2 { margin: 6px 0 0; border-color: rgba(233,196,106,.2); background: rgba(0,0,0,.08); }
+  .acc-lead { color: #9fc9b1; }
   #win-pattern-list .win-pattern-empty { color: #9fc9b1; font-size: 14px; text-align: center; padding: 18px 0; }
   .win-pattern-item {
     border: 1px solid rgba(233,196,106,.45); border-radius: 10px;
@@ -1635,7 +1647,41 @@
         <span>和牌牌型</span>
         <button id="win-pattern-close">✕</button>
       </div>
-      <div id="win-pattern-list"></div>
+      <div id="win-pattern-body">
+        <details class="acc" open>
+          <summary>加成得分</summary>
+          <div class="acc-body">
+            <p class="acc-lead">加成得分 = 整数加成得分（暂未加入）+ 百分比加成得分。</p>
+            <details class="acc acc-sub" open>
+              <summary>百分比加成得分</summary>
+              <div class="acc-body">
+                <p class="acc-lead">按「和牌得分 × 百分比」计入，可叠加。目前来源：王牌、阴阳宝牌。</p>
+                <details class="acc acc-sub2">
+                  <summary>王牌</summary>
+                  <div class="acc-body">
+                    <p>R（大王）/ Y（小王）不是万能牌，不能替普通牌；只与王牌自己组成面子或将牌，R/Y 之间可以互相碰、杠（不能吃）。</p>
+                    <p><b>将牌</b>：RR +75%　YY +50%　RY +25%</p>
+                    <p><b>刻子</b>：RRR +150%　RRY +125%　RYY +100%　YYY +75%</p>
+                    <p><b>杠</b>：RRRR +200%　RRRY +175%　RRYY +150%　RYYY +125%　YYYY +100%</p>
+                    <p>多个王牌面子/将牌<b>叠加</b>；判定花色/类型类牌型时视为任意花色、任意类型。按和牌得分折算成百分比加成。</p>
+                  </div>
+                </details>
+                <details class="acc acc-sub2">
+                  <summary>阴阳宝牌</summary>
+                  <div class="acc-body">
+                    <p>每局从牌堆底抽 5 张：<b>3 张阳牌</b>（正面）+ <b>2 张阴牌</b>（背面）。每次杠从牌堆底再加 <b>1 阳 1 阴</b>，每局最多 4 次；上限 <b>7 阳 6 阴（13 张）</b>。</p>
+                    <p>和牌时翻开所有阴牌。每张阳牌：手里每有一张<b>同色不同花、同点数</b>的牌，+25%；每张阴牌同理 <b>+50%</b>。每张宝牌独立计算。</p>
+                    <p>R/Y 宝牌互相计算：R 宝牌给手中的 Y 加分，Y 宝牌给手中的 R 加分；同色替代牌不计宝牌。</p>
+                    <p>最终按和牌得分折算成百分比加成。</p>
+                  </div>
+                </details>
+              </div>
+            </details>
+          </div>
+        </details>
+        <div class="win-pattern-section-title">已登记牌型</div>
+        <div id="win-pattern-list"></div>
+      </div>
       <div id="win-pattern-foot">在「牌型测试」中和牌匹配后启用；启用后正式对局结算生效。</div>
     </div>
   </div>
