@@ -127,15 +127,14 @@
     border-radius: 8px; background: rgba(255,250,238,.65);
   }
   .pt-dora-panel.hidden { display: none; }
-  .pt-dora-line { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+  .pt-dora-line { display: flex; align-items: center; gap: 4px; margin: 4px 0; }
   .pt-dora-label { color: #6b3f1d; font-weight: 800; font-size: 13px; width: 18px; flex: 0 0 auto; }
-  .pt-dora-opts { display: flex; flex-wrap: wrap; gap: 3px; }
-  .pt-dora-opt {
-    width: 24px; height: 24px; padding: 0; border-radius: 6px;
-    border: 1px solid rgba(169,127,67,.55); background: rgba(255,255,255,.55);
-    color: #6b3f1d; font-size: 12px; font-weight: 700; cursor: pointer;
+  .pt-dora-select {
+    height: 24px; border-radius: 5px; border: 1px solid rgba(169,127,67,.55);
+    background: rgba(255,255,255,.65); color: #6b3f1d; font-size: 12px; font-weight: 700; padding: 0 2px;
   }
-  .pt-dora-opt.on { background: #b8860b; border-color: #8a5a00; color: #fff; }
+  .pt-dora-x { color: #7b5b35; font-size: 11px; white-space: nowrap; }
+  .pt-dora-pct { color: #8a5a00; font-size: 12px; font-weight: 800; min-width: 38px; text-align: right; }
   .pt-dora-tip { color: #7b5b35; font-size: 11px; line-height: 1.4; margin-top: 3px; }
   #pt-left { width: 360px; flex: 0 0 360px; }
   #pt-cards {
@@ -1644,11 +1643,25 @@
         <div id="pt-bottom" class="pt-box">
           <div class="pt-title">测试区</div>
           <div class="pt-dora-control">
-            <button id="pt-dora-btn" class="pt-dora-btn">宝牌加成：阳 0 · 阴 0</button>
+            <button id="pt-dora-btn" class="pt-dora-btn">宝牌加成：+0%</button>
             <div id="pt-dora-panel" class="hidden">
-              <div class="pt-dora-line"><span class="pt-dora-label">阳</span><div id="pt-dora-yang-opts" class="pt-dora-opts"></div></div>
-              <div class="pt-dora-line"><span class="pt-dora-label">阴</span><div id="pt-dora-yin-opts" class="pt-dora-opts"></div></div>
-              <div class="pt-dora-tip">每个阳 +25%，每个阴 +50%，按和牌得分折算。</div>
+              <div class="pt-dora-line">
+                <span class="pt-dora-label">阳</span>
+                <select id="pt-dora-yang-dora" class="pt-dora-select"></select>
+                <span class="pt-dora-x">宝牌 ×</span>
+                <select id="pt-dora-yang-hand" class="pt-dora-select"></select>
+                <span class="pt-dora-x">手牌</span>
+                <span id="pt-dora-yang-pct" class="pt-dora-pct">+0%</span>
+              </div>
+              <div class="pt-dora-line">
+                <span class="pt-dora-label">阴</span>
+                <select id="pt-dora-yin-dora" class="pt-dora-select"></select>
+                <span class="pt-dora-x">宝牌 ×</span>
+                <select id="pt-dora-yin-hand" class="pt-dora-select"></select>
+                <span class="pt-dora-x">手牌</span>
+                <span id="pt-dora-yin-pct" class="pt-dora-pct">+0%</span>
+              </div>
+              <div class="pt-dora-tip">每张阳宝牌给每张受加成手牌 +25%；每张阴宝牌给每张受加成手牌 +50%。手牌数按实际受加成的牌数选（0~15）。</div>
             </div>
           </div>
           <div class="pt-note">单击左侧牌加入手牌；双击左侧牌选择鸣牌；双击手牌或鸣牌组退回</div>
@@ -5946,7 +5959,7 @@ let patternPaletteBuilt = false;
 let ptTypes = [], ptPaletteEls = {}, ptCounts = {};
 let ptHand = [], ptMelds = [], ptMeldOptions = [], ptTileSeq = 500000, ptClickTimer = null;
 let ptLastHandTileId = null, ptLastWinCtx = null, ptLastWinTsumo = false;
-let ptDoraYang = 0, ptDoraYin = 0, ptDoraBuilt = false;
+let ptDoraYang = 0, ptDoraYin = 0, ptHandYang = 0, ptHandYin = 0, ptDoraBuilt = false;
 function ptKey(suit, rank){ return suit + '-' + rank; }
 function ptTileWrap(t, opts){
   const wrap = document.createElement('div');
@@ -5995,39 +6008,53 @@ function buildPatternPalette(){
     });
   }
 }
-function ptDoraPct(){ return ptDoraYang * 25 + ptDoraYin * 50; }
+function ptDoraPct(){ return ptDoraYang * ptHandYang * 25 + ptDoraYin * ptHandYin * 50; }
 function updatePtDoraUI(){
+  const setSel = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
+  setSel('pt-dora-yang-dora', ptDoraYang);
+  setSel('pt-dora-yin-dora', ptDoraYin);
+  setSel('pt-dora-yang-hand', ptHandYang);
+  setSel('pt-dora-yin-hand', ptHandYin);
+  const yp = ptDoraYang * ptHandYang * 25;
+  const np = ptDoraYin * ptHandYin * 50;
+  const yEl = document.getElementById('pt-dora-yang-pct');
+  if (yEl) yEl.textContent = '+' + yp + '%';
+  const nEl = document.getElementById('pt-dora-yin-pct');
+  if (nEl) nEl.textContent = '+' + np + '%';
   const btn = document.getElementById('pt-dora-btn');
   if (btn){
     const pct = ptDoraPct();
-    btn.textContent = '宝牌加成：阳 ' + ptDoraYang + ' · 阴 ' + ptDoraYin + (pct ? '（+' + pct + '%）' : '');
+    btn.textContent = '宝牌加成：+' + pct + '%'
+      + (pct ? '（阳 ' + ptDoraYang + '×' + ptHandYang + ' / 阴 ' + ptDoraYin + '×' + ptHandYin + '）' : '');
   }
-  document.querySelectorAll('#pt-dora-yang-opts .pt-dora-opt').forEach(b => b.classList.toggle('on', Number(b.dataset.count) === ptDoraYang));
-  document.querySelectorAll('#pt-dora-yin-opts .pt-dora-opt').forEach(b => b.classList.toggle('on', Number(b.dataset.count) === ptDoraYin));
 }
-function setPtDoraCount(kind, value){
-  if (kind === 'yang') ptDoraYang = value;
-  else ptDoraYin = value;
+function onPtDoraChange(){
+  const read = (id) => { const el = document.getElementById(id); return el ? (Number(el.value) || 0) : 0; };
+  ptDoraYang = read('pt-dora-yang-dora');
+  ptDoraYin = read('pt-dora-yin-dora');
+  ptHandYang = read('pt-dora-yang-hand');
+  ptHandYin = read('pt-dora-yin-hand');
   updatePtDoraUI();
   if (ptLastWinCtx) renderPtWinScore(ptLastWinTsumo, ptLastWinCtx);
 }
 function buildPtDoraControls(){
   if (ptDoraBuilt) return;
   ptDoraBuilt = true;
-  const mk = (hostId, kind, max) => {
-    const host = document.getElementById(hostId);
-    if (!host) return;
+  const fill = (id, max) => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
     for (let i = 0; i <= max; i++){
-      const b = document.createElement('button');
-      b.className = 'pt-dora-opt';
-      b.dataset.count = i;
-      b.textContent = i;
-      b.addEventListener('click', () => setPtDoraCount(kind, i));
-      host.appendChild(b);
+      const o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = String(i);
+      sel.appendChild(o);
     }
+    sel.addEventListener('change', onPtDoraChange);
   };
-  mk('pt-dora-yang-opts', 'yang', 7);
-  mk('pt-dora-yin-opts', 'yin', 6);
+  fill('pt-dora-yang-dora', 7);
+  fill('pt-dora-yin-dora', 6);
+  fill('pt-dora-yang-hand', 15);
+  fill('pt-dora-yin-hand', 15);
   const btn = document.getElementById('pt-dora-btn');
   if (btn) btn.addEventListener('click', () => {
     const panel = document.getElementById('pt-dora-panel');
@@ -6341,6 +6368,8 @@ function calcPtWinScore(tsumo, ctx){
     jokerParts: joker.parts || [],
     doraYang: ptDoraYang,
     doraYin: ptDoraYin,
+    doraHandYang: ptHandYang,
+    doraHandYin: ptHandYin,
     sameColorWin,
     selfGroups,
     base,
@@ -6360,8 +6389,8 @@ function renderPtWinScore(tsumo, ctx){
     + '　·　百分比加成 ' + signedScoreText(r.percentBonusScore);
   const dDora = document.createElement('div');
   dDora.className = 'pt-score-detail';
-  if (r.doraYang || r.doraYin){
-    dDora.textContent = '宝牌加成 +' + r.doraPct + '%（阳 ' + r.doraYang + ' ×25% / 阴 ' + r.doraYin + ' ×50%）';
+  if (r.doraYang || r.doraYin || r.doraHandYang || r.doraHandYin){
+    dDora.textContent = '宝牌加成 +' + r.doraPct + '%（阳 ' + r.doraYang + ' 张 × ' + r.doraHandYang + ' 手牌 ×25% / 阴 ' + r.doraYin + ' 张 × ' + r.doraHandYin + ' 手牌 ×50%）';
   }
   const d2 = document.createElement('div');
   d2.className = 'pt-score-detail';
@@ -6375,10 +6404,10 @@ function renderPtWinScore(tsumo, ctx){
   d2.textContent = parts.join('　·　');
   const d3 = document.createElement('div');
   d3.className = 'pt-score-detail';
-  d3.textContent = '按已启用牌型计算；宝牌按测试区选择的阳/阴数量计算；他人同色惩罚只在正式对局荣和时结算';
+  d3.textContent = '按已启用牌型计算；宝牌按“宝牌数 × 受加成手牌数”计算；他人同色惩罚只在正式对局荣和时结算';
   host.appendChild(main);
   host.appendChild(d1);
-  if (r.doraYang || r.doraYin) host.appendChild(dDora);
+  if (r.doraYang || r.doraYin || r.doraHandYang || r.doraHandYin) host.appendChild(dDora);
   host.appendChild(d2);
   host.appendChild(d3);
 }
@@ -6441,7 +6470,7 @@ function ptReset(){
   if (ptClickTimer){ clearTimeout(ptClickTimer); ptClickTimer = null; }
   ptHand = []; ptMelds = [];
   ptLastHandTileId = null; ptLastWinCtx = null; ptLastWinTsumo = false;
-  ptDoraYang = 0; ptDoraYin = 0;
+  ptDoraYang = 0; ptDoraYin = 0; ptHandYang = 0; ptHandYin = 0;
   const doraPanel = document.getElementById('pt-dora-panel');
   if (doraPanel) doraPanel.classList.add('hidden');
   updatePtDoraUI();
