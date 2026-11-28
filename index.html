@@ -1697,7 +1697,7 @@
             <details class="acc acc-sub" open>
               <summary>百分比加成得分</summary>
               <div class="acc-body">
-                <p class="acc-lead">按「和牌得分 × 百分比」计入，可叠加。目前来源：王牌、阴阳宝牌。</p>
+                <p class="acc-lead">按「和牌得分 × 百分比」计入，可叠加。目前来源：王牌、阴阳宝牌、自摸、自力更生。</p>
                 <details class="acc acc-sub2">
                   <summary>王牌</summary>
                   <div class="acc-body">
@@ -1715,6 +1715,19 @@
                     <p>和牌时翻开所有阴牌。每张阳牌：手里每有一张<b>同色不同花、同点数</b>的牌，+25%；每张阴牌同理 <b>+50%</b>。每张宝牌独立计算。</p>
                     <p>R/Y 宝牌互相计算：R 宝牌给手中的 Y 加分，Y 宝牌给手中的 R 加分；同色替代牌不计宝牌。</p>
                     <p>最终按和牌得分折算成百分比加成。</p>
+                  </div>
+                </details>
+                <details class="acc acc-sub2">
+                  <summary>自摸</summary>
+                  <div class="acc-body">
+                    <p>自摸和牌时，百分比加成 <b>+25%</b>。</p>
+                  </div>
+                </details>
+                <details class="acc acc-sub2">
+                  <summary>自力更生</summary>
+                  <div class="acc-body">
+                    <p>和牌张来自<b>自己街牌区</b>时，百分比加成 <b>+25%</b>。</p>
+                    <p>拿自己的街牌算自摸，所以可以和「自摸 +25%」叠加。</p>
                   </div>
                 </details>
               </div>
@@ -1856,7 +1869,8 @@
 
         <h3>计分</h3>
         <p><b>总得分 = 结算得分{ [（和牌得分 + 百分比加成得分） - 同色和牌惩罚 - 整数同色惩罚] ÷ 同色约数惩罚 } + 他人同色惩罚。</b></p>
-        <p><b>和牌得分</b> = 牌型得分 + 整数加成得分（现在整数加成为 0）。<b>牌型得分</b> = 基础分（自摸 8 / 荣和 4）+ 已启用牌型的加成。<b>百分比加成得分</b> = 王牌 + 宝牌，按和牌得分计算。</p>
+        <p><b>和牌得分</b> = 牌型得分 + 整数加成得分（现在整数加成为 0）。<b>牌型得分</b> = 基础分（自摸 8 / 荣和 4）+ 已启用牌型的加成。<b>百分比加成得分</b> = 王牌 + 宝牌 + 自摸 + 自力更生，按和牌得分计算。</p>
+        <p><b>自摸</b>：自摸和牌 +25%。<b>自力更生</b>：和牌张来自自己街牌区 +25%（拿自己的街牌算自摸，可与自摸叠加）。</p>
         <p><b>同色和牌惩罚</b>：和牌张为同色张时，直接 <b>-25%</b>。</p>
         <p><b>自己同色惩罚</b>（按同色牌型 / 同色杠数量，杠优先；乘除档全部累乘/累除）：</p>
         <ul>
@@ -2205,15 +2219,17 @@ function isNormalTile(hand, numMelds, T){
     if (canWin(removeIds([sameRank[0].id, sameRank[1].id]), numMelds + 1, false, false)) return true;
   }
   // 3) 顺子：T 与两张同花色连续牌（含 A23）
-  const seqCands = [[-2,-1],[-1,1],[1,2],[2,3],[RANK_MAX,3],[RANK_MAX,2]];
-  for (const [ra, rb] of seqCands){
-    if (ra < RANK_MIN || ra > RANK_MAX || rb < RANK_MIN || rb > RANK_MAX) continue;
-    const ranks = [T.rank, ra, rb].sort((x,y)=>x-y);
-    const isA23 = ranks[0]===2 && ranks[1]===3 && ranks[2]===RANK_MAX;
-    const isSeq = ranks[2] <= RANK_SEQ_MAX && ranks[1]===ranks[0]+1 && ranks[2]===ranks[1]+1;
-    if (!isA23 && !isSeq) continue;
-    const ta = hand.find(t => t.suit === T.suit && t.rank === ra);
-    const tb = hand.find(t => t.suit === T.suit && t.rank === rb && t.id !== (ta ? ta.id : -1));
+  const seqs = [];
+  for (let s = RANK_MIN; s <= RANK_SEQ_MAX - 2; s++){
+    const seq = [s, s + 1, s + 2];
+    if (seq.includes(T.rank)) seqs.push(seq);
+  }
+  if ([RANK_MAX, 2, 3].includes(T.rank)) seqs.push([RANK_MAX, 2, 3]);
+  for (const seq of seqs){
+    const need = seq.filter(x => x !== T.rank);
+    if (need.length !== 2) continue;
+    const ta = hand.find(t => t.suit === T.suit && t.rank === need[0]);
+    const tb = hand.find(t => t.suit === T.suit && t.rank === need[1] && t.id !== (ta ? ta.id : -1));
     if (ta && tb){
       if (canWin(removeIds([ta.id, tb.id]), numMelds + 1, false, false)) return true;
     }
@@ -2982,6 +2998,9 @@ const SCORE_COMPONENT_LABELS = {
   patternPct: '牌型百分比',
   jokerPct: '王牌百分比',
   doraPct: '宝牌百分比',
+  tsumoPct: '自摸百分比',
+  selfReliancePct: '自力更生百分比',
+  percentPct: '百分比合计',
   percentBonusScore: '百分比加成得分',
   prePenaltyScore: '惩罚前得分',
   sameColorWinPenalty: '同色和牌惩罚',
@@ -3023,13 +3042,16 @@ function calcSettlementScore(input){
   const integerBonusScore = Number(input.integerBonusScore) || 0;
   const jokerPct = Number(input.jokerPct) || 0;
   const doraPct = Number(input.doraPct) || 0;
+  const tsumoPct = Number(input.tsumoPct) || 0;
+  const selfReliancePct = Number(input.selfReliancePct) || 0;
   const sameColorWin = !!input.sameColorWin;
   const selfGroups = input.selfGroups || { patternCount:0, kongCount:0 };
   const otherGroups = input.otherGroups || null;
 
   const patternScore = Math.round(baseScore * (1 + patternPct / 100)) + patternPoints;
   const handScore = patternScore + integerBonusScore;
-  const percentBonusScore = Math.round(handScore * (jokerPct + doraPct) / 100);
+  const percentPct = jokerPct + doraPct + tsumoPct + selfReliancePct;
+  const percentBonusScore = Math.round(handScore * percentPct / 100);
   const prePenaltyScore = handScore + percentBonusScore;
   const sameColorWinPenalty = sameColorWin ? Math.round(prePenaltyScore * 25 / 100) : 0;
 
@@ -3088,7 +3110,7 @@ function calcSettlementScore(input){
     baseScore,
     patternPct, patternPoints, patternScore,
     integerBonusScore, handScore,
-    jokerPct, doraPct, percentBonusScore, prePenaltyScore,
+    jokerPct, doraPct, tsumoPct, selfReliancePct, percentPct, percentBonusScore, prePenaltyScore,
     sameColorWinPenaltyPct: sameColorWin ? 25 : 0,
     sameColorWinPenalty,
     sameColorGroupCount: selfGroups.patternCount || 0,
@@ -3695,7 +3717,7 @@ function playerDraw(seat){
   // 这三种状态只禁止「荣和」，所以这里刻意不调 canRonAgainst。
   if (players[seat].riichi && canWin(players[seat].hand, players[seat].melds.length, false, true)){
     if (players[seat].isHuman){
-      phase = 'claim'; pendingClaim = { seat, type:'tsumo', winTile: tile };
+      phase = 'claim'; pendingClaim = { seat, type:'tsumo', winTile: tile, fromOwnStreet: false };
       render();
       return;
     }
@@ -3930,10 +3952,10 @@ function streetDraw(seat, sourceSeat){
                                    : (!ronBlocked(seat, tile) && canWin(p.hand, p.melds.length, false, true)));
   if (streetWinOk){
     if (p.isHuman){
-      phase = 'claim'; pendingClaim = { seat, type:'tsumo', tsumoDiscarder: fromOwnStreet ? null : sourceSeat, winTile: tile };
+      phase = 'claim'; pendingClaim = { seat, type:'tsumo', tsumoDiscarder: fromOwnStreet ? null : sourceSeat, winTile: tile, fromOwnStreet };
       render(); return;
     }
-    if (!aiTestMode){ schedule(() => declareWin(seat, fromOwn ? null : sourceSeat, fromOwn, tile), 700); return; }
+    if (!aiTestMode){ schedule(() => declareWin(seat, fromOwnStreet ? null : sourceSeat, fromOwnStreet, tile, fromOwnStreet), 700); return; }
     // aiTestMode：AI 不胡，继续出牌
   }
   phase = 'discarding';
@@ -4132,11 +4154,11 @@ function kongAfterDraw(seat, sourceSeat, fromOwn, tile){
   if (kongWinOk){
     if (players[seat].isHuman){
       phase = 'claim';
-      pendingClaim = { seat, type:'tsumo', tsumoDiscarder: fromOwn ? null : sourceSeat, winTile: tile };
+      pendingClaim = { seat, type:'tsumo', tsumoDiscarder: fromOwn ? null : sourceSeat, winTile: tile, fromOwnStreet: fromOwn };
       render();
       return;
     }
-    if (!aiTestMode){ schedule(() => declareWin(seat, fromOwn ? null : sourceSeat, fromOwn, tile), 700); return; }
+    if (!aiTestMode){ schedule(() => declareWin(seat, fromOwn ? null : sourceSeat, fromOwn, tile, fromOwn), 700); return; }
     // 测试模式：AI 杠上开花也不胡，继续正常出牌
   }
   phase = 'discarding';
@@ -4236,12 +4258,13 @@ function findQuad(hand){
 }
 
 // ---------------- 和牌 ----------------
-function declareWin(seat, discarderSeat, isTsumo, winTile){
+function declareWin(seat, discarderSeat, isTsumo, winTile, fromOwnStreet){
   phase = 'over';
   recordHandResult('win', [seat]);
   const p = players[seat];
   p.revealed = true;
   revealDoraYin();
+  const ownStreet = !!fromOwnStreet;
   const winHand = p.hand.slice();
   if (winTile && !winHand.some(t => t.id === winTile.id)) winHand.push(winTile);
   // 和牌张是否靠同色替代完成（也是同色和牌惩罚 -25% 的判定）
@@ -4268,6 +4291,8 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
     integerBonusScore: 0,       // 整数加成得分：后续从这里接入
     jokerPct: jokerBonus.pct,
     doraPct: doraBonus.pct,
+    tsumoPct: isTsumo ? 25 : 0,
+    selfReliancePct: ownStreet ? 25 : 0,
     sameColorWin,
     selfGroups,
     otherGroups,
@@ -4278,6 +4303,8 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
   const patternNames = patternHits.map(h => h.def.name + ' ' + winPatternBonusText(h.def)).join('　');
   const bonusTxt = (jokerBonus.pct > 0 ? ('王牌加成 +' + jokerBonus.pct + '%，') : '')
                  + (doraBonus.pct > 0 ? ('宝牌加成 +' + doraBonus.pct + '%，') : '')
+                 + (isTsumo ? '自摸加成 +25%，' : '')
+                 + (ownStreet ? '自力更生 +25%，' : '')
                  + (patternHits.length && (patternSum.pct || patternSum.points) ? ('牌型加成 ' + (patternSum.pct ? '+' + patternSum.pct + '%' : '') + (patternSum.points ? (patternSum.pct ? ' +' : '+') + patternSum.points + '分' : '') + '（' + patternNames + '），') : '');
   log('🎉 ' + p.name + ' ' + winName + ' 和牌！' + tileTxt + bonusTxt + '得分 ' + signedScoreText(score), true);
   if (sameColorWin || selfGroups.total || (otherGroups && otherGroups.total)){
@@ -4330,6 +4357,10 @@ function declareWin(seat, discarderSeat, isTsumo, winTile){
     jokerParts: (jokerBonus.parts || []).slice(),
     doraPct: doraBonus.pct,
     doraParts: (doraBonus.parts || []).slice(),
+    tsumoPct: settlement.tsumoPct,
+    selfReliancePct: settlement.selfReliancePct,
+    percentPct: settlement.percentPct,
+    fromOwnStreet: ownStreet,
     patternPct: patternSum.pct,
     patternPoints: patternSum.points,
     patterns: patternHits.map(h => ({ id:h.def.id, name:h.def.name, desc:h.def.desc, bonusPct:h.def.bonusPct, bonusPoints:h.def.bonusPoints })),
@@ -4681,7 +4712,7 @@ function humanClaim(type){
     if (type === 'win'){
       // 街牌区拿牌的杠上开花：拿自己的算自摸，拿别人的算放铳
       const disc = c.tsumoDiscarder != null ? c.tsumoDiscarder : null;
-      declareWin(c.seat, disc, disc == null, c.winTile);
+      declareWin(c.seat, disc, disc == null, c.winTile, !!c.fromOwnStreet);
       return;
     }
     if (type === 'pass'){ enterFuriten(c.seat); phase = 'discarding'; pendingClaim = null; render(); afterStateChange(); return; }
@@ -5265,6 +5296,18 @@ function renderWinModal(){
       const names = info.doraParts.map(p => tileText(p.tile) + (p.yang ? '阳' : '阴') + '×' + p.count + ' +' + p.pct + '%').join('　');
       db.textContent = '宝牌加成 +' + info.doraPct + '%　（' + names + '）';
       panel.appendChild(db);
+    }
+    if (info.tsumoPct > 0){
+      const tb = document.createElement('div');
+      tb.className = 'win-joker-bonus';
+      tb.textContent = '自摸加成 +' + info.tsumoPct + '%';
+      panel.appendChild(tb);
+    }
+    if (info.selfReliancePct > 0){
+      const sb = document.createElement('div');
+      sb.className = 'win-joker-bonus';
+      sb.textContent = '自力更生加成 +' + info.selfReliancePct + '%（和牌张来自自己街牌区）';
+      panel.appendChild(sb);
     }
     if (info.patterns && info.patterns.length && (info.patternPct || info.patternPoints)){
       const pb = document.createElement('div');
@@ -6356,6 +6399,8 @@ function calcPtWinScore(tsumo, ctx){
     integerBonusScore: 0,
     jokerPct: joker.pct,
     doraPct: ptDoraPct(),
+    tsumoPct: tsumo ? 25 : 0,
+    selfReliancePct: 0,
     sameColorWin,
     selfGroups,
     otherGroups: null,
@@ -6392,6 +6437,9 @@ function renderPtWinScore(tsumo, ctx){
   if (r.doraYang || r.doraYin || r.doraHandYang || r.doraHandYin){
     dDora.textContent = '宝牌加成 +' + r.doraPct + '%（阳 ' + r.doraYang + ' 张 × ' + r.doraHandYang + ' 手牌 ×25% / 阴 ' + r.doraYin + ' 张 × ' + r.doraHandYin + ' 手牌 ×50%）';
   }
+  const dTsumo = document.createElement('div');
+  dTsumo.className = 'pt-score-detail';
+  if (r.tsumoPct) dTsumo.textContent = '自摸加成 +' + r.tsumoPct + '%';
   const d2 = document.createElement('div');
   d2.className = 'pt-score-detail';
   const parts = [];
@@ -6407,6 +6455,7 @@ function renderPtWinScore(tsumo, ctx){
   d3.textContent = '按已启用牌型计算；宝牌按“宝牌数 × 受加成手牌数”计算；他人同色惩罚只在正式对局荣和时结算';
   host.appendChild(main);
   host.appendChild(d1);
+  if (r.tsumoPct) host.appendChild(dTsumo);
   if (r.doraYang || r.doraYin || r.doraHandYang || r.doraHandYin) host.appendChild(dDora);
   host.appendChild(d2);
   host.appendChild(d3);
